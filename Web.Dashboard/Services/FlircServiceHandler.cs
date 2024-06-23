@@ -100,6 +100,9 @@ public class FlircServiceHandler
 
     public OperationResult QueueTransmit(MappedIr mapped)
     {
+        if (!IsConnected)
+            return OperationResult.FailureResult("Cannot queue button, the device is not connected.");
+
         if (IsScanning)
             return OperationResult.FailureResult("Cannot queue button, someone is currently adding a new key.");
 

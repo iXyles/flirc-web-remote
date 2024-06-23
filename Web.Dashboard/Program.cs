@@ -12,6 +12,16 @@ public class Program
     {
         var builder = WebApplication.CreateBuilder(args);
 
+        // Configure the URLs
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
+        {
+            builder.WebHost.UseUrls(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")!);
+        }
+        else if (!string.IsNullOrEmpty(builder.Configuration["Urls"]))
+        {
+            builder.WebHost.UseUrls(builder.Configuration["Urls"]!);
+        }
+
         // Add services to the container.
         builder.Services.AddRazorComponents()
             .AddInteractiveServerComponents();

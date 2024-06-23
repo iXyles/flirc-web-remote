@@ -10,10 +10,11 @@ The application supports multiple remote controls for different devices.
 
 The plan is to ensure it works on various operating systems, including Windows, macOS, and Linux, which is why I decided to use Blazor Server.
 
+## Supported & Verified OS
 - [x] MacOS (ARM64)
-- [ ] Windows (x64)
+- [x] Windows (x64)
 - [ ] Linux (x64)
-- [ ] Linux (ARM64)
+- [x] Linux (ARM64)
 
 ## Getting Started
 
@@ -21,8 +22,9 @@ The application is built using Blazor Server (.NET), whilst wrapping the SDKs (C
 
 ### Dependencies
 
-* Built with .NET 8.0, as a blazor server for an interactive interface
-* A [FLIRC USB](https://flirc.tv/products/flirc-usb-receiver?variant=43513067569384) stick
+* .NET 8.0
+* LINUX: `libhidapi-hidraw0 libhidapi-dev libc6 libusb-1.0-0-dev libudev-dev` libs installed
+* A [FLIRC USB](https://flirc.tv/products/flirc-usb-receiver?variant=43513067569384) stick (to run/test it)
 
 ### Features
 

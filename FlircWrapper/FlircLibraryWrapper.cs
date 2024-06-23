@@ -35,16 +35,24 @@ public static class FlircLibraryWrapper
 
     static FlircLibraryWrapper()
     {
-        var dllName = GetLibraryFileBasedOnPlatform();
-        var module = LibResolver.LoadLib(dllName);
+        try
+        {
+            var dllName = GetLibraryFileBasedOnPlatform();
+            var module = LibResolver.LoadLib(dllName);
 
-        LibResolver.AssignFunctionPointer(module, nameof(fl_open_device_alt), out fl_open_device_alt);
-        LibResolver.AssignFunctionPointer(module, nameof(fl_wait_for_device), out fl_wait_for_device);
-        LibResolver.AssignFunctionPointer(module, nameof(fl_lib_version), out fl_lib_version);
-        LibResolver.AssignFunctionPointer(module, nameof(fl_ir_packet_poll), out fl_ir_packet_poll);
-        LibResolver.AssignFunctionPointer(module, nameof(fl_close_device), out fl_close_device);
-        LibResolver.AssignFunctionPointer(module, nameof(fl_dev_flush), out fl_dev_flush);
-        LibResolver.AssignFunctionPointer(module, nameof(fl_transmit_raw), out fl_transmit_raw);
+            LibResolver.AssignFunctionPointer(module, nameof(fl_open_device_alt), out fl_open_device_alt);
+            LibResolver.AssignFunctionPointer(module, nameof(fl_wait_for_device), out fl_wait_for_device);
+            LibResolver.AssignFunctionPointer(module, nameof(fl_lib_version), out fl_lib_version);
+            LibResolver.AssignFunctionPointer(module, nameof(fl_ir_packet_poll), out fl_ir_packet_poll);
+            LibResolver.AssignFunctionPointer(module, nameof(fl_close_device), out fl_close_device);
+            LibResolver.AssignFunctionPointer(module, nameof(fl_dev_flush), out fl_dev_flush);
+            LibResolver.AssignFunctionPointer(module, nameof(fl_transmit_raw), out fl_transmit_raw);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            Console.WriteLine(ex.StackTrace);
+        }
     }
 
     static string GetLibraryFileBasedOnPlatform() =>
@@ -54,9 +62,10 @@ public static class FlircLibraryWrapper
             Architecture.X64 when RuntimeInformation.IsOSPlatform(OSPlatform.Windows) => "libs/win-x64/libflirc.dll",
 
             // LINUX
-            Architecture.X64 when RuntimeInformation.IsOSPlatform(OSPlatform.Linux) => "libs/linux-x86_64/libflirc.so.3.27.15",
-            Architecture.X86 when RuntimeInformation.IsOSPlatform(OSPlatform.Linux) => "libs/linux-x86_64/libflirc.so.3.27.15",
+            //Architecture.X64 when RuntimeInformation.IsOSPlatform(OSPlatform.Linux) => "libs/linux-x86_64/libflirc.so.3.27.15",
+            //Architecture.X86 when RuntimeInformation.IsOSPlatform(OSPlatform.Linux) => "libs/linux-x86_64/libflirc.so.3.27.15",
             Architecture.Arm64 when RuntimeInformation.IsOSPlatform(OSPlatform.Linux) => "libs/linux-arm64/libflirc.so.3.27.15",
+            //Architecture.Arm when RuntimeInformation.IsOSPlatform(OSPlatform.Linux) => "libs/linux-arm/libflirc.so.3.27.15",
 
             // MAC
             //Architecture.X64 when RuntimeInformation.IsOSPlatform(OSPlatform.OSX) => "libs/macos-x64/libflirc.3.27.15.dylib",

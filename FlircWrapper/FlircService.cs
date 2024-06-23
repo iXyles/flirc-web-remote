@@ -116,13 +116,28 @@ public class FlircService
         FlircLibraryWrapper.fl_close_device();
     }
 
-    public nint SendPacket(IrProt packet)
+    public nint SendPacket(IrProt packet, bool retry = true)
     {
-        // ensure we flush the interface of pending packets before sending a packet
-        Debug.WriteLine("Flush interface of pending packets...");
-        FlircLibraryWrapper.fl_dev_flush();
-        Debug.WriteLine("Transmit packet...");
-        return IrLibraryWrapper.ir_tx(packet.protocol, packet.scancode, packet.repeat);
+        try
+        {
+            // ensure we flush the interface of pending packets before sending a packet
+            Debug.WriteLine("Flush interface of pending packets...");
+            FlircLibraryWrapper.fl_dev_flush();
+            Debug.WriteLine("Transmit packet...");
+            return IrLibraryWrapper.ir_tx(packet.protocol, packet.scancode, packet.repeat);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Sending packet threw an exception: {ex.Message}...");
+            if (!retry)
+                return -1;
+            Debug.WriteLine("Attempting Re-register transmitter and re-send...");
+            if (RegisterTransmitter())
+                return SendPacket(packet, false);
+
+            Debug.WriteLine("Failed to add a new transmitter, packet not sent...");
+            return -1;
+        }
     }
 
     private string GetBufValue(ref IrPacket packet)

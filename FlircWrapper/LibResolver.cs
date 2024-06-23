@@ -22,6 +22,9 @@ public static class LibResolver
     [DllImport("libdl.so.2", EntryPoint = "dlopen")]
     private static extern IntPtr dlopen_linux(string fileName, int flags);
 
+    [DllImport("libdl.so.2", EntryPoint = "dlerror")]
+    private static extern IntPtr dlerror_linux();
+
     [DllImport("libdl.so.2", EntryPoint = "dlsym")]
     private static extern IntPtr dlsym_linux(IntPtr handle, string symbol);
 
@@ -38,7 +41,7 @@ public static class LibResolver
             hModule = LoadLibrary(dllName);
             if (hModule == IntPtr.Zero)
             {
-                int errorCode = Marshal.GetLastWin32Error();
+                var errorCode = Marshal.GetLastWin32Error();
                 throw new Exception($"Failed to load library: {dllName}, Error Code: {errorCode}");
             }
         }
@@ -47,7 +50,7 @@ public static class LibResolver
             hModule = dlopen_linux(dllName, RtldNow);
             if (hModule == IntPtr.Zero)
             {
-                throw new Exception($"Failed to load library: {dllName}");
+                throw new Exception($"Failed to load library: {dllName} - {Marshal.PtrToStringAnsi(dlerror_linux())}");
             }
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))

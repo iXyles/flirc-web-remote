@@ -42,7 +42,7 @@
         </None>
     </ItemGroup>
 
-    <!-- Linux ARM64 -->
+    <!-- Linux ARM64 (64bit) -->
     <ItemGroup>
         <None Update="libs/linux-arm64/libflirc.so.3.27.15">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -51,5 +51,7 @@
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
     </ItemGroup>
+
+    <!-- Linux ARM (32bit) -->
     
 </Project>

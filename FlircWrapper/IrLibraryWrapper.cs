@@ -25,13 +25,21 @@ public static class IrLibraryWrapper
 
     static IrLibraryWrapper()
     {
-        var dllName = GetLibraryFileBasedOnPlatform();
-        var module = LibResolver.LoadLib(dllName);
+        try
+        {
+            var dllName = GetLibraryFileBasedOnPlatform();
+            var module = LibResolver.LoadLib(dllName);
 
-        LibResolver.AssignFunctionPointer(module, nameof(ir_lib_version), out ir_lib_version);
-        LibResolver.AssignFunctionPointer(module, nameof(ir_decode_packet), out ir_decode_packet);
-        LibResolver.AssignFunctionPointer(module, nameof(ir_tx), out ir_tx);
-        LibResolver.AssignFunctionPointer(module, nameof(ir_register_tx), out ir_register_tx);
+            LibResolver.AssignFunctionPointer(module, nameof(ir_lib_version), out ir_lib_version);
+            LibResolver.AssignFunctionPointer(module, nameof(ir_decode_packet), out ir_decode_packet);
+            LibResolver.AssignFunctionPointer(module, nameof(ir_tx), out ir_tx);
+            LibResolver.AssignFunctionPointer(module, nameof(ir_register_tx), out ir_register_tx);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            Console.WriteLine(ex.StackTrace);
+        }
     }
 
     static string GetLibraryFileBasedOnPlatform() =>
@@ -41,9 +49,10 @@ public static class IrLibraryWrapper
             Architecture.X64 when RuntimeInformation.IsOSPlatform(OSPlatform.Windows) => "libs/win-x64/libir.dll",
 
             // LINUX
-            Architecture.X64 when RuntimeInformation.IsOSPlatform(OSPlatform.Linux) => "libs/linux-x86_64/libir.so.3.27.15",
-            Architecture.X86 when RuntimeInformation.IsOSPlatform(OSPlatform.Linux) => "libs/linux-x86_64/libir.so.3.27.15",
+            //Architecture.X64 when RuntimeInformation.IsOSPlatform(OSPlatform.Linux) => "libs/linux-x86_64/libir.so.3.27.15",
+            //Architecture.X86 when RuntimeInformation.IsOSPlatform(OSPlatform.Linux) => "libs/linux-x86_64/libir.so.3.27.15",
             Architecture.Arm64 when RuntimeInformation.IsOSPlatform(OSPlatform.Linux) => "libs/linux-arm64/libir.so.3.27.15",
+            //Architecture.Arm when RuntimeInformation.IsOSPlatform(OSPlatform.Linux) => "libs/linux-arm/libir.so.3.27.15",
 
             // MAC
             //Architecture.X64 when RuntimeInformation.IsOSPlatform(OSPlatform.OSX) => "libs/macos-x64/libir.3.27.15.dylib",
