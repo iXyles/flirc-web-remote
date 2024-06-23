@@ -1,0 +1,48 @@
+@using Web.Dashboard.Services
+
+@inject MappingService MappingService;
+@inject ISnackbar Snackbar;
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField T="string" @bind-Value="_name" Immediate="true" OnKeyDown="Callback" Label="Key name" Variant="Variant.Outlined" Margin="Margin.Dense">
+        </MudTextField>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Fail">Cancel</MudButton>
+        <MudButton OnClick="Submit" Disabled="BeDisabled">Add</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private string _name = string.Empty;
+
+    [CascadingParameter]
+    MudDialogInstance MudDialog { get; set; } = null!;
+
+    private bool BeDisabled => string.IsNullOrWhiteSpace(_name);
+
+    private void Submit()
+    {
+        var result = MappingService.AddRemote(_name);
+
+        if (result.IsSuccess())
+        {
+            Snackbar.Add("New virtual remote added!", Severity.Success);
+            Success();
+        }
+        else
+        {
+            Snackbar.Add(string.Join(Environment.NewLine, result.ErrorMessages), Severity.Error);
+        }
+    }
+
+    private void Callback(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && !BeDisabled)
+            Submit();
+    }
+
+    void Success() => InvokeAsync(() => MudDialog.Close(DialogResult.Ok(true)));
+    void Fail() => InvokeAsync(() => MudDialog.Cancel());
+}

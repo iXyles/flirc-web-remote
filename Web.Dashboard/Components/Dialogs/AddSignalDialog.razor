@@ -1,0 +1,149 @@
+@using FlircWrapper
+@using Web.Dashboard.Models
+@using Web.Dashboard.Services
+
+@inject MappingService MappingService;
+@inject FlircServiceHandler ServiceHandler;
+@inject ISnackbar Snackbar;
+
+@implements IDisposable
+
+<MudDialog>
+    <DialogContent>
+        @if (_foundProt == null)
+        {
+            <MudProgressCircular Color="Color.Info" Indeterminate="true" />
+            <MudText Typo="Typo.body1">
+                PRESS REMOTE BUTTON...
+            </MudText>
+        }
+        else
+        {
+            <MudText Typo="Typo.body1">
+                REMOTE BUTTON PRESSED
+            </MudText>
+            <MudTextField T="string" @bind-Value="_name" Immediate="true" OnKeyDown="Callback" Label="Key name" Variant="Variant.Outlined" Margin="Margin.Dense">
+
+            </MudTextField>
+            <MudField Label="Protocol" Variant="Variant.Outlined" Margin="Margin.Dense">
+                @_foundProt.Value.protocol
+            </MudField>
+            <MudField Label="Scancode" Variant="Variant.Outlined" Margin="Margin.Dense">
+                @_foundProt.Value.scancode
+            </MudField>
+            <MudField Label="Repeat" Variant="Variant.Outlined" Margin="Margin.Dense">
+                @_foundProt.Value.repeat
+            </MudField>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Fail">Cancel</MudButton>
+        <MudButton OnClick="Submit" Disabled="BeDisabled">Add</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private CancellationTokenSource? _cancellation;
+    private Task<OperationResult<IrProt>>? _result;
+    private IrProt? _foundProt;
+    private string _name = string.Empty;
+
+    [CascadingParameter]
+    MudDialogInstance MudDialog { get; set; } = null!;
+
+    [EditorRequired, Parameter]
+    public string RemoteName { get; set; } = null!;
+
+    private bool BeDisabled => _foundProt == null || string.IsNullOrWhiteSpace(_name);
+
+    protected override void OnInitialized()
+    {
+        if (!ServiceHandler.IsConnected)
+        {
+            Snackbar.Add("Device not connected...", Severity.Error);
+            Fail();
+            return;
+        }
+
+        if (ServiceHandler.IsScanning)
+        {
+            Snackbar.Add("Someone else is currently adding a new key...", Severity.Error);
+            Fail();
+            return;
+        }
+
+        _cancellation = new CancellationTokenSource();
+        HandleTaskCompletion(ServiceHandler.StartPoll(_cancellation.Token));
+    }
+
+    private void HandleTaskCompletion(Task<OperationResult<IrProt>> pollingTask)
+    {
+        pollingTask.ContinueWith(async t =>
+        {
+            if (t.IsFaulted)
+            {
+                Fail();
+                Snackbar.Add(t.Exception.Message, Severity.Error);
+            }
+            else if (t.IsCompletedSuccessfully)
+            {
+                // Handle successful completion
+                var result = t.Result;
+                if (!result.TryGetResult(out var prot))
+                {
+                    Fail();
+                    Snackbar.Add(string.Join(Environment.NewLine, result.ErrorMessages), Severity.Error);
+                }
+
+                _foundProt = prot;
+                await InvokeAsync(StateHasChanged);
+            }
+        });
+    }
+
+    private void Callback(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && !BeDisabled)
+            Submit();
+    }
+
+    private void Submit()
+    {
+        if (!_foundProt.HasValue)
+        {
+            Snackbar.Add("Cannot add if no signal has been registered", Severity.Error);
+            return;
+        }
+
+        var result = MappingService.AddMapping(RemoteName, new MappedIr(
+            _name,
+            _foundProt.Value.scancode,
+            _foundProt.Value.protocol,
+            _foundProt.Value.repeat
+        ));
+
+        if (result.IsSuccess())
+        {
+            Snackbar.Add("Mapped signal added!", Severity.Success);
+            Success();
+        }
+        else
+        {
+            Snackbar.Add(string.Join(Environment.NewLine, result.ErrorMessages), Severity.Error);
+        }
+    }
+
+    void Success() => InvokeAsync(() => MudDialog.Close(DialogResult.Ok(true)));
+    void Fail() => InvokeAsync(() => MudDialog.Cancel());
+
+    public void Dispose()
+    {
+        if (_cancellation != null && _result != null)
+        {
+            _cancellation.Cancel();
+            _cancellation = null;
+            _result = null;
+        }
+    }
+
+}

@@ -1,0 +1,73 @@
+@page "/"
+@using Web.Dashboard.Components.Dialogs
+@using Web.Dashboard.Services
+
+@inject IDialogService DialogService;
+@inject MappingService MappingService;
+@inject ISnackbar Snackbar;
+@inject NavigationManager Navigation;
+
+@implements IDisposable
+
+<MudContainer Class="mt-6" MaxWidth="MaxWidth.False">
+    <MudGrid>
+        @foreach (var remote in MappingService.GetVirtualRemotes())
+        {
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <MudPaper Elevation="2" Class="pa-4 d-flex flex-column" Style="height: 200px">
+                    <MudField Label="NAME:" Variant="Variant.Outlined" Margin="Margin.Dense">@remote.Name</MudField>
+                    <MudSpacer/>
+                    <MudButton Class="mt-4" OnClick="@(() => OpenRemote(remote.Name))" FullWidth="true" Variant="Variant.Filled" Color="Color.Primary" DropShadow="false">
+                        OPEN
+                    </MudButton>
+                    <MudButton Class="mt-4" OnClick="@(() => RemoveRemote(remote.Name))" FullWidth="true" Variant="Variant.Filled" Color="Color.Error" DropShadow="false">
+                        REMOVE
+                    </MudButton>
+                </MudPaper>
+            </MudItem>
+        }
+        <MudItem xs="12" sm="6" md="4" lg="3">
+            <MudPaper Elevation="2" Class="pa-4 d-flex flex-column" Style="height: 200px">
+                <MudButton Style="height: 100%" OnClick="@AddNewRemote" FullWidth="true" Variant="Variant.Filled" Color="Color.Primary" DropShadow="false">
+                    ADD NEW REMOTE...
+                </MudButton>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+
+    protected override void OnInitialized()
+    {
+        MappingService.OnChange += MappingServiceOnOnChange;
+    }
+
+    private void MappingServiceOnOnChange(object? sender, EventArgs e)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task AddNewRemote()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        await DialogService.ShowAsync<AddRemoteDialog>("Add virtual remote..", options);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void OpenRemote(string name)
+    {
+        Navigation.NavigateTo($"/remote/{name}");
+    }
+
+    private void RemoveRemote(string remote)
+    {
+        Snackbar.Add("Remote removal to be implemented...");
+    }
+
+    public void Dispose()
+    {
+        MappingService.OnChange -= MappingServiceOnOnChange;
+    }
+
+}

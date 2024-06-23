@@ -1,0 +1,97 @@
+@page "/remote/{RemoteName}"
+
+@using Web.Dashboard.Components.Dialogs
+@using Web.Dashboard.Models
+@using Web.Dashboard.Services
+
+@inject IDialogService DialogService;
+@inject MappingService MappingService;
+@inject FlircServiceHandler ServiceHandler;
+@inject ISnackbar Snackbar;
+@inject NavigationManager Navigation;
+
+@implements IDisposable
+
+<MudContainer Class="mt-6" MaxWidth="MaxWidth.False">
+    <MudButton OnClick="GoBack">Remotes...</MudButton>
+    <MudGrid>
+        @foreach (var mapped in MappingService.GetRemoteMappings(RemoteName))
+        {
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <MudPaper Elevation="2" Class="pa-4 d-flex flex-column" Style="height: 200px">
+                    <MudButton Style="height: 100%" OnClick="@(() => SendSignal(mapped))" FullWidth="true" Variant="Variant.Filled" Color="Color.Primary" DropShadow="false">
+                        @mapped.Name
+                    </MudButton>
+                </MudPaper>
+            </MudItem>
+        }
+        <MudItem xs="12" sm="6" md="4" lg="3">
+            <MudPaper Elevation="2" Class="pa-4 d-flex flex-column" Style="height: 200px">
+                <MudButton Style="height: 100%" OnClick="@AddNewSignal" FullWidth="true" Variant="Variant.Filled" Color="Color.Primary" DropShadow="false">
+                    ADD NEW MAPPING...
+                </MudButton>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    [Parameter]
+    public string RemoteName { get; set; }
+
+    protected override void OnInitialized()
+    {
+        MappingService.OnChange += MappingServiceOnOnChange;
+        ServiceHandler.OnTransmitResult += ServiceHandlerOnOnTransmitResult;
+    }
+
+    private void ServiceHandlerOnOnTransmitResult(object? sender, OperationResultEventArgs e)
+    {
+        if (!e.OperationResult.IsSuccess())
+        {
+            // TODO ; Add so we can know if it came from "this" remote or not (?)
+            Snackbar.Add($"FAILED TRANSMITTING KEY: {e.Key}, CODE: {string.Join(Environment.NewLine, e.OperationResult.ErrorMessages)}", Severity.Error, opt =>
+            {
+                opt.VisibleStateDuration = 1000;
+            }, "transmit");
+        }
+    }
+
+    private void MappingServiceOnOnChange(object? sender, EventArgs e)
+    {
+        InvokeAsync(StateHasChanged);
+    }
+
+    private void AddNewSignal()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var parameters = new DialogParameters()
+        {
+            { nameof(AddSignalDialog.RemoteName), RemoteName }
+        };
+         DialogService.Show<AddSignalDialog>("Add Mapping..", parameters, options);
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private void SendSignal(MappedIr mapped)
+    {
+        var result = ServiceHandler.QueueTransmit(mapped);
+        if (!result.IsSuccess())
+        {
+            Snackbar.Add(string.Join(Environment.NewLine, result.ErrorMessages), Severity.Error, opt =>
+            {
+                opt.VisibleStateDuration = 3000;
+            }, "transmit");
+        }
+    }
+
+    public void Dispose()
+    {
+        MappingService.OnChange -= MappingServiceOnOnChange;
+    }
+
+}
