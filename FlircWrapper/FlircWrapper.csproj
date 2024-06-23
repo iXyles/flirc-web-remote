@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
-    <!-- MAC M1 > -->
+    <!-- MacOS ARM64 (M1 >) -->
     <ItemGroup>
         <None Update="libs/macos-arm64/libflirc.3.27.15.dylib">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -28,6 +28,26 @@
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
         <None Update="libs/win-x64/libir.dll">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <!-- Linux 64 & 32bit -->
+    <ItemGroup>
+        <None Update="libs/linux-x86_64/libflirc.so.3.27.15">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="libs/linux-x86_64/libir.so.3.27.15">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <!-- Linux ARM64 -->
+    <ItemGroup>
+        <None Update="libs/linux-arm64/libflirc.so.3.27.15">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="libs/linux-arm64/libir.so.3.27.15">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
     </ItemGroup>
