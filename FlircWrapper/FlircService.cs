@@ -12,17 +12,17 @@ public class FlircService
     const ushort VendorId = 0x20A0; // Flirc vendor ID
     const string DeviceId = "flirc.tv"; // Flirc device ID
 
-    public string FetchFlircLibraryVersion() =>
-        Marshal.PtrToStringAnsi(FlircSdkWrapper.fl_lib_version());
+    public string? FetchFlircLibraryVersion() =>
+        Marshal.PtrToStringAnsi(FlircLibraryWrapper.fl_lib_version());
 
-    public string FetchIrLibraryVersion() =>
-        Marshal.PtrToStringAnsi(IrSdkWrapper.ir_lib_version());
+    public string? FetchIrLibraryVersion() =>
+        Marshal.PtrToStringAnsi(IrLibraryWrapper.ir_lib_version());
 
     public bool OpenConnection()
     {
         try
         {
-            return FlircSdkWrapper.fl_open_device_alt(VendorId, DeviceId) >= 0;
+            return FlircLibraryWrapper.fl_open_device_alt(VendorId, DeviceId) >= 0;
         }
         catch
         {
@@ -34,7 +34,7 @@ public class FlircService
     {
         try
         {
-            return FlircSdkWrapper.fl_wait_for_device(VendorId, DeviceId) >= 0;
+            return FlircLibraryWrapper.fl_wait_for_device(VendorId, DeviceId) >= 0;
         }
         catch
         {
@@ -44,8 +44,8 @@ public class FlircService
 
     public bool RegisterTransmitter()
     {
-        IrSdkWrapper.IrRegisterTxCallback callback = FlircSdkWrapper.fl_transmit_raw;
-        return IrSdkWrapper.ir_register_tx(callback) == 0;
+        IrLibraryWrapper.IrRegisterTxCallback callback = new IrLibraryWrapper.IrRegisterTxCallback(FlircLibraryWrapper.fl_transmit_raw);
+        return IrLibraryWrapper.ir_register_tx(callback) == 0;
     }
 
     /// <summary>
@@ -62,7 +62,8 @@ public class FlircService
                 break;
 
             Console.WriteLine("Polling for packet...");
-            var result = FlircSdkWrapper.fl_ir_packet_poll(ref packet);
+            var result = FlircLibraryWrapper.fl_ir_packet_poll(ref packet);
+            Console.WriteLine($"Polled packet: {result}");
             switch (result)
             {
                 case 0:
@@ -79,7 +80,7 @@ public class FlircService
                         buf = new ushort[256],
                         pronto = new ushort[256]
                     };
-                    var proto = IrSdkWrapper.ir_decode_packet(ref packet, ref processed);
+                    var proto = IrLibraryWrapper.ir_decode_packet(ref packet, ref processed);
 
                     Debug.WriteLine($"Received IR signal: Scancode = 0x{processed.scancode:X}, Protocol = {processed.protocol}, Repeat = {processed.repeat}");
                     Debug.WriteLine(GetBufValue(ref packet));
@@ -112,16 +113,16 @@ public class FlircService
 
     public void CloseConnection()
     {
-        FlircSdkWrapper.fl_close_device();
+        FlircLibraryWrapper.fl_close_device();
     }
 
     public nint SendPacket(IrProt packet)
     {
         // ensure we flush the interface of pending packets before sending a packet
         Debug.WriteLine("Flush interface of pending packets...");
-        FlircSdkWrapper.fl_dev_flush();
+        FlircLibraryWrapper.fl_dev_flush();
         Debug.WriteLine("Transmit packet...");
-        return IrSdkWrapper.ir_tx(packet.protocol, packet.scancode, packet.repeat);
+        return IrLibraryWrapper.ir_tx(packet.protocol, packet.scancode, packet.repeat);
     }
 
     private string GetBufValue(ref IrPacket packet)

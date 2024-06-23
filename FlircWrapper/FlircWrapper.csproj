@@ -5,20 +5,30 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
     </PropertyGroup>
-    
-    <!-- MAC ARM OS -->
+
+    <!-- MAC M1 > -->
     <ItemGroup>
-        <None Update="libs\macos-arm\libflirc.3.27.15.dylib">
+        <None Update="libs/macos-arm64/libflirc.3.27.15.dylib">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="libs\macos-arm\libhidapi.0.dylib">
+        <None Update="libs/macos-arm64/libhidapi.0.dylib">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="libs\macos-arm\libir.3.27.15.dylib">
+        <None Update="libs/macos-arm64/libir.3.27.15.dylib">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
-        <None Update="libs\macos-arm\libusb-1.0.0.dylib">
+        <None Update="libs/macos-arm64/libusb-1.0.0.dylib">
           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+    </ItemGroup>
+
+    <!-- Windows 64bit -->
+    <ItemGroup>
+        <None Update="libs/win-x64/libflirc.dll">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="libs/win-x64/libir.dll">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </None>
     </ItemGroup>
     

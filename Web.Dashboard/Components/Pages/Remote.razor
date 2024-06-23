@@ -37,10 +37,16 @@
 
 @code {
     [Parameter]
-    public string RemoteName { get; set; }
+    public string? RemoteName { get; set; }
 
     protected override void OnInitialized()
     {
+        if (string.IsNullOrWhiteSpace(RemoteName))
+        {
+            GoBack();
+            return;
+        }
+
         MappingService.OnChange += MappingServiceOnOnChange;
         ServiceHandler.OnTransmitResult += ServiceHandlerOnOnTransmitResult;
     }
@@ -65,11 +71,11 @@
     private void AddNewSignal()
     {
         var options = new DialogOptions { CloseOnEscapeKey = true };
-        var parameters = new DialogParameters()
+        var parameters = new DialogParameters
         {
             { nameof(AddSignalDialog.RemoteName), RemoteName }
         };
-         DialogService.Show<AddSignalDialog>("Add Mapping..", parameters, options);
+         DialogService.Show<AddSignalDialog>("Add IR mapping..", parameters, options);
     }
 
     private void GoBack()

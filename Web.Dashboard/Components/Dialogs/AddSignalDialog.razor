@@ -10,31 +10,31 @@
 
 <MudDialog>
     <DialogContent>
-        @if (_foundProt == null)
-        {
-            <MudProgressCircular Color="Color.Info" Indeterminate="true" />
-            <MudText Typo="Typo.body1">
-                PRESS REMOTE BUTTON...
-            </MudText>
-        }
-        else
-        {
-            <MudText Typo="Typo.body1">
-                REMOTE BUTTON PRESSED
-            </MudText>
-            <MudTextField T="string" @bind-Value="_name" Immediate="true" OnKeyDown="Callback" Label="Key name" Variant="Variant.Outlined" Margin="Margin.Dense">
-
-            </MudTextField>
-            <MudField Label="Protocol" Variant="Variant.Outlined" Margin="Margin.Dense">
-                @_foundProt.Value.protocol
-            </MudField>
-            <MudField Label="Scancode" Variant="Variant.Outlined" Margin="Margin.Dense">
-                @_foundProt.Value.scancode
-            </MudField>
-            <MudField Label="Repeat" Variant="Variant.Outlined" Margin="Margin.Dense">
-                @_foundProt.Value.repeat
-            </MudField>
-        }
+        <div class="d-flex justify-center flex-column">
+            @if (_foundProt == null)
+            {
+                <MudProgressCircular Color="Color.Info" Indeterminate="true" Size="Size.Large" Style="margin: 0 auto" />
+                <MudText Typo="Typo.body1" Class="mt-4">
+                    PRESS REMOTE BUTTON...
+                </MudText>
+            }
+            else
+            {
+                <MudText Typo="Typo.body1">
+                    REMOTE BUTTON PRESSED
+                </MudText>
+                <MudTextField T="string" @bind-Value="_name" Immediate="true" OnKeyDown="Callback" Label="Key name" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                <MudField Label="Protocol" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @_foundProt.Value.protocol
+                </MudField>
+                <MudField Label="Scancode" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @_foundProt.Value.scancode
+                </MudField>
+                <MudField Label="Repeat" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @_foundProt.Value.repeat
+                </MudField>
+            }
+        </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Fail">Cancel</MudButton>

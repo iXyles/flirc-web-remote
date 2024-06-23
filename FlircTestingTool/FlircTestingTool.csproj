@@ -8,7 +8,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\FlircWrapper\FlircWrapper.csproj" />
+        <ProjectReference Include="..\FlircWrapper\FlircWrapper.csproj" />
     </ItemGroup>
 
 </Project>

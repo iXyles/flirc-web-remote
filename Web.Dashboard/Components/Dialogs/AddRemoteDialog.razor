@@ -5,8 +5,7 @@
 
 <MudDialog>
     <DialogContent>
-        <MudTextField T="string" @bind-Value="_name" Immediate="true" OnKeyDown="Callback" Label="Key name" Variant="Variant.Outlined" Margin="Margin.Dense">
-        </MudTextField>
+        <MudTextField T="string" @bind-Value="_name" Immediate="true" OnKeyDown="Callback" Label="Remote name" Variant="Variant.Outlined" Margin="Margin.Dense" />
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Fail">Cancel</MudButton>

@@ -16,21 +16,17 @@ public class MappingService
 
     public event EventHandler? OnChange;
 
-    /// <summary>
-    /// Get a clone of all "current" remotes as immutable (just so we cannot modify it else where...).
-    /// Be careful... it makes a new copy everytime this is referenced.
-    /// </summary>
-    public ImmutableDictionary<string, VirtualRemote> GetRemotes() =>
-        _remotes.ToImmutableDictionary();
-
     public IEnumerable<VirtualRemote> GetVirtualRemotes()
     {
         foreach (var remote in _remotes)
             yield return remote.Value;
     }
 
-    public IEnumerable<MappedIr> GetRemoteMappings(string remoteName)
+    public IEnumerable<MappedIr> GetRemoteMappings(string? remoteName)
     {
+        if (string.IsNullOrWhiteSpace(remoteName))
+            yield break;
+
         if (_remotes.TryGetValue(remoteName, out var remote))
         {
             foreach (var mapping in remote.Mappings)
@@ -122,9 +118,19 @@ public class MappingService
         lock (WriteLock)
         {
             // re-save all "remotes"
+            EnsureDirectoryExists(PathToRemotes);
             using var file = File.OpenWrite(PathToRemotes);
             JsonSerializer.Serialize(file, _remotes, _options);
             OnChange?.Invoke(this, EventArgs.Empty); // TODO : Might have to change so this is more "granular"
+        }
+    }
+
+    private static void EnsureDirectoryExists(string filePath)
+    {
+        var directory = Path.GetDirectoryName(filePath);
+        if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+        {
+            Directory.CreateDirectory(directory);
         }
     }
 }
