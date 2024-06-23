@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace FlircWrapper;
 
@@ -12,6 +13,9 @@ public static class LibResolver
 
     [DllImport("libSystem.dylib", EntryPoint = "dlopen")]
     private static extern IntPtr dlopen_mac(string fileName, int flags);
+
+    [DllImport("libSystem.dylib", EntryPoint = "dlerror")]
+    private static extern IntPtr dlerror_mac();
 
     [DllImport("libSystem.dylib", EntryPoint = "dlsym")]
     private static extern IntPtr dlsym_mac(IntPtr handle, string symbol);
@@ -35,30 +39,33 @@ public static class LibResolver
 
     public static IntPtr LoadLib(string dllName)
     {
+        var exePath = Assembly.GetExecutingAssembly().Location;
+        var pathToDll = Path.Combine(Path.GetDirectoryName(exePath)!, dllName);
+
         IntPtr hModule;
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
-            hModule = LoadLibrary(dllName);
+            hModule = LoadLibrary(pathToDll);
             if (hModule == IntPtr.Zero)
             {
                 var errorCode = Marshal.GetLastWin32Error();
-                throw new Exception($"Failed to load library: {dllName}, Error Code: {errorCode}");
+                throw new Exception($"Failed to load library: {pathToDll}, Error Code: {errorCode}");
             }
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
         {
-            hModule = dlopen_linux(dllName, RtldNow);
+            hModule = dlopen_linux(pathToDll, RtldNow);
             if (hModule == IntPtr.Zero)
             {
-                throw new Exception($"Failed to load library: {dllName} - {Marshal.PtrToStringAnsi(dlerror_linux())}");
+                throw new Exception($"Failed to load library: {pathToDll} - {Marshal.PtrToStringAnsi(dlerror_linux())}");
             }
         }
         else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            hModule = dlopen_mac(dllName, RtldNow);
+            hModule = dlopen_mac(pathToDll, RtldNow);
             if (hModule == IntPtr.Zero)
             {
-                throw new Exception($"Failed to load library: {dllName}");
+                throw new Exception($"Failed to load library: {pathToDll} - {Marshal.PtrToStringAnsi(dlerror_mac())}");
             }
         }
         else

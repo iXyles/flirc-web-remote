@@ -33,8 +33,7 @@ public class FlircServiceHandler
         // if failed, maybe disconnected, then wait till it is connected
         else if (_flircService.WaitForDevice())
         {
-            IsConnected = true;
-            _flircService.RegisterTransmitter();
+            ConnectDevice();
         }
         // TODO : How to handle "re-connects" of the device? and how do we detect disconnects (?)
     }

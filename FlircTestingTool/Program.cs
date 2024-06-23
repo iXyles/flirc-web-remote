@@ -31,6 +31,8 @@ if (!connected)
         Console.WriteLine("Failed connecting, closing program...");
         return;
     }
+
+    service.OpenConnection();
     service.RegisterTransmitter();
     Console.WriteLine("Flirc device opened successfully...");
 }
