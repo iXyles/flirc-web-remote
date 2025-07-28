@@ -1,7 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+// ReSharper disable FieldCanBeMadeReadOnly.Global
+// ReSharper disable InconsistentNaming
 
 namespace FlircWrapper;
 
+[SuppressMessage("Usage", "CA2211:Non-constant fields should not be visible")]
 public static class FlircLibraryWrapper
 {
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -25,13 +29,13 @@ public static class FlircLibraryWrapper
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate int fl_transmit_raw_delegate(IntPtr buf, ushort len, ushort ik, byte repeat);
 
-    public static fl_open_device_alt_delegate fl_open_device_alt;
-    public static fl_wait_for_device_delegate fl_wait_for_device;
-    public static fl_lib_version_delegate fl_lib_version;
-    public static fl_ir_packet_poll_delegate fl_ir_packet_poll;
-    public static fl_close_device_delegate fl_close_device;
-    public static fl_dev_flush_delegate fl_dev_flush;
-    public static fl_transmit_raw_delegate fl_transmit_raw;
+    public static fl_open_device_alt_delegate fl_open_device_alt = null!;
+    public static fl_wait_for_device_delegate fl_wait_for_device = null!;
+    public static fl_lib_version_delegate fl_lib_version = null!;
+    public static fl_ir_packet_poll_delegate fl_ir_packet_poll = null!;
+    public static fl_close_device_delegate fl_close_device = null!;
+    public static fl_dev_flush_delegate fl_dev_flush = null!;
+    public static fl_transmit_raw_delegate fl_transmit_raw = null!;
 
     static FlircLibraryWrapper()
     {

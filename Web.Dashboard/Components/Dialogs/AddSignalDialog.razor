@@ -2,9 +2,9 @@
 @using Web.Dashboard.Models
 @using Web.Dashboard.Services
 
-@inject MappingService MappingService;
-@inject FlircServiceHandler ServiceHandler;
-@inject ISnackbar Snackbar;
+@inject MappingService MappingService
+@inject FlircServiceHandler ServiceHandler
+@inject ISnackbar Snackbar
 
 @implements IDisposable
 
@@ -23,7 +23,7 @@
                 <MudText Typo="Typo.body1">
                     REMOTE BUTTON PRESSED
                 </MudText>
-                <MudTextField T="string" @bind-Value="_name" Immediate="true" OnKeyDown="Callback" Label="Key name" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+                <MudTextField T="string" @bind-Value="_name" Immediate="true" OnKeyDown="@Callback" Label="Key name" Variant="Variant.Outlined" Margin="Margin.Dense" />
                 <MudField Label="Protocol" Variant="Variant.Outlined" Margin="Margin.Dense">
                     @_foundProt.Value.protocol
                 </MudField>
@@ -37,8 +37,8 @@
         </div>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Fail">Cancel</MudButton>
-        <MudButton OnClick="Submit" Disabled="BeDisabled">Add</MudButton>
+        <MudButton OnClick="@Fail">Cancel</MudButton>
+        <MudButton OnClick="@Submit" Disabled="BeDisabled">Add</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -49,7 +49,7 @@
     private string _name = string.Empty;
 
     [CascadingParameter]
-    MudDialogInstance MudDialog { get; set; } = null!;
+    IMudDialogInstance MudDialog { get; set; } = null!;
 
     [EditorRequired, Parameter]
     public string RemoteName { get; set; } = null!;

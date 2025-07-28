@@ -4,16 +4,16 @@
 @using Web.Dashboard.Models
 @using Web.Dashboard.Services
 
-@inject IDialogService DialogService;
-@inject MappingService MappingService;
-@inject FlircServiceHandler ServiceHandler;
-@inject ISnackbar Snackbar;
-@inject NavigationManager Navigation;
+@inject IDialogService DialogService
+@inject MappingService MappingService
+@inject FlircServiceHandler ServiceHandler
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
 
 @implements IDisposable
 
 <MudContainer Class="mt-6" MaxWidth="MaxWidth.False">
-    <MudButton OnClick="GoBack">Remotes...</MudButton>
+    <MudButton OnClick="@GoBack">Remotes...</MudButton>
     <MudGrid>
         @foreach (var mapped in MappingService.GetRemoteMappings(RemoteName))
         {
@@ -75,7 +75,7 @@
         {
             { nameof(AddSignalDialog.RemoteName), RemoteName }
         };
-         DialogService.Show<AddSignalDialog>("Add IR mapping..", parameters, options);
+        DialogService.Show<AddSignalDialog>("Add IR mapping..", parameters, options);
     }
 
     private void GoBack()
@@ -99,5 +99,4 @@
     {
         MappingService.OnChange -= MappingServiceOnOnChange;
     }
-
 }

@@ -1,15 +1,15 @@
 @using Web.Dashboard.Services
 
-@inject MappingService MappingService;
-@inject ISnackbar Snackbar;
+@inject MappingService MappingService
+@inject ISnackbar Snackbar
 
 <MudDialog>
     <DialogContent>
-        <MudTextField T="string" @bind-Value="_name" Immediate="true" OnKeyDown="Callback" Label="Remote name" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        <MudTextField T="string" @bind-Value="_name" Immediate="true" OnKeyDown="@Callback" Label="Remote name" Variant="Variant.Outlined" Margin="Margin.Dense" />
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Fail">Cancel</MudButton>
-        <MudButton OnClick="Submit" Disabled="BeDisabled">Add</MudButton>
+        <MudButton OnClick="@Fail">Cancel</MudButton>
+        <MudButton OnClick="@Submit" Disabled="BeDisabled">Add</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -17,7 +17,7 @@
     private string _name = string.Empty;
 
     [CascadingParameter]
-    MudDialogInstance MudDialog { get; set; } = null!;
+    IMudDialogInstance MudDialog { get; set; } = null!;
 
     private bool BeDisabled => string.IsNullOrWhiteSpace(_name);
 

@@ -1,7 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
+// ReSharper disable InconsistentNaming
+// ReSharper disable FieldCanBeMadeReadOnly.Global
 
 namespace FlircWrapper;
 
+[SuppressMessage("Usage", "CA2211:Non-constant fields should not be visible")]
 public static class IrLibraryWrapper
 {
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -16,10 +20,10 @@ public static class IrLibraryWrapper
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     public delegate IntPtr ir_register_tx_delegate(IrRegisterTxCallback transmitFunction);
 
-    public static ir_lib_version_delegate ir_lib_version;
-    public static ir_decode_packet_delegate ir_decode_packet;
-    public static ir_tx_delegate ir_tx;
-    public static ir_register_tx_delegate ir_register_tx;
+    public static ir_lib_version_delegate ir_lib_version = null!;
+    public static ir_decode_packet_delegate ir_decode_packet = null!;
+    public static ir_tx_delegate ir_tx = null!;
+    public static ir_register_tx_delegate ir_register_tx = null!;
 
     public delegate int IrRegisterTxCallback(IntPtr buf, ushort len, ushort ik, byte rep);
 

@@ -22,7 +22,7 @@ The application is built using Blazor Server (.NET), whilst wrapping the SDKs (C
 
 ### Dependencies
 
-* .NET 8.0
+* .NET 9.0
 * LINUX: `libhidapi-hidraw0 libhidapi-dev libc6 libusb-1.0-0-dev libudev-dev` libs installed
 * A [FLIRC USB](https://flirc.tv/products/flirc-usb-receiver?variant=43513067569384) stick (to run/test it)
 

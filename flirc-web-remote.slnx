@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="FlircTestingTool/FlircTestingTool.csproj" />
+  <Project Path="FlircWrapper/FlircWrapper.csproj" />
+  <Project Path="Web.Dashboard/Web.Dashboard.csproj" />
+</Solution>
