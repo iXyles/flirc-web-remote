@@ -68,14 +68,14 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private void AddNewSignal()
+    private async Task AddNewSignal()
     {
         var options = new DialogOptions { CloseOnEscapeKey = true };
         var parameters = new DialogParameters
         {
             { nameof(AddSignalDialog.RemoteName), RemoteName }
         };
-        DialogService.Show<AddSignalDialog>("Add IR mapping..", parameters, options);
+        await DialogService.ShowAsync<AddSignalDialog>("Add IR mapping..", parameters, options);
     }
 
     private void GoBack()

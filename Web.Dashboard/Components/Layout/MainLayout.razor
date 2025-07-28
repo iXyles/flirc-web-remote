@@ -1,4 +1,8 @@
-﻿@inherits LayoutComponentBase
+﻿@using Web.Dashboard.Services
+@inherits LayoutComponentBase
+@implements IDisposable
+
+@inject FlircServiceHandler ServiceHandler
 
 <MudThemeProvider/>
 <MudPopoverProvider/>
@@ -7,10 +11,33 @@
 
 <MudLayout>
     <MudAppBar>
-        <MudIconButton Color="Color.Inherit" Edge="Edge.Start" />
         Remote App
+        <MudSpacer/>
+        @if (ServiceHandler.IsConnected)
+        {
+            <MudChip T="string" Color="Color.Success">DEVICE CONNECTED</MudChip>
+        }
+        else
+        {
+            <MudChip T="string" Color="Color.Warning">DEVICE NOT CONNECTED</MudChip>
+        }
     </MudAppBar>
     <MudMainContent>
         @Body
     </MudMainContent>
 </MudLayout>
+
+@code {
+    protected override void OnInitialized()
+    {
+        ServiceHandler.OnConnectionChanged += HandleConnectionChanged;
+    }
+
+    private void HandleConnectionChanged(object? sender, EventArgs e) =>
+        InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        ServiceHandler.OnConnectionChanged -= HandleConnectionChanged;
+    }
+}

@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using System.Collections.Immutable;
 using System.Text.Json;
 using Web.Dashboard.Models;
 
@@ -10,7 +9,7 @@ public class MappingService
     // location where we will store the recorded remotes
     private const string PathToRemotes = "./data/remotes.json";
 
-    private static readonly object WriteLock = new();
+    private static readonly Lock WriteLock = new();
     private ConcurrentDictionary<string, VirtualRemote> _remotes = new();
     private readonly JsonSerializerOptions _options = JsonSerializerOptions.Default;
 

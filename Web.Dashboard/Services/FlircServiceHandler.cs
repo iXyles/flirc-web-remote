@@ -7,10 +7,8 @@ namespace Web.Dashboard.Services;
 public class FlircServiceHandler
 {
     private readonly FlircService _flircService;
-
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly BlockingCollection<MappedIr> _queue = new(new ConcurrentQueue<MappedIr>());
-
     private Task? _processorTask;
 
     public FlircServiceHandler(FlircService flircService)
@@ -21,6 +19,7 @@ public class FlircServiceHandler
     public bool IsConnected { get; private set; }
     public bool IsScanning { get; private set; }
     public event EventHandler<OperationResultEventArgs>? OnTransmitResult;
+    public event EventHandler? OnConnectionChanged;
 
     public void ConnectDevice()
     {
@@ -29,6 +28,7 @@ public class FlircServiceHandler
         {
             IsConnected = true;
             _flircService.RegisterTransmitter();
+            OnConnectionChanged?.Invoke(this,EventArgs.Empty);
         }
         // if failed, maybe disconnected, then wait till it is connected
         else if (_flircService.WaitForDevice())
@@ -59,9 +59,11 @@ public class FlircServiceHandler
                     new OperationResultEventArgs(
                         result == 0
                             ? OperationResult.SuccessResult()
-                            : OperationResult.FailureResult($"Failed to transmit... error code: {result}"),
+                            : OperationResult.FailureResult($"Failed to transmit... error code: {result}"
+                        ),
                         mapped.Name
-                    ));
+                    )
+                );
             }
             finally
             {

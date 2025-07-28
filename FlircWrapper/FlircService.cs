@@ -88,9 +88,7 @@ public class FlircService
                     // if decoded packet is invalid, repeat or unknown, ignore it.
                     // UNSURE if there are other "proto"s that should be handled differently...
                     // Or if these are needed for some special protocol/sequence
-                    if (proto == RcProto.RC_PROTO_INVALID ||
-                        proto == RcProto.RC_PROTO_NEC_REPEAT ||
-                        proto == RcProto.RC_PROTO_UNKNOWN)
+                    if (proto is RcProto.RC_PROTO_INVALID or RcProto.RC_PROTO_NEC_REPEAT or RcProto.RC_PROTO_UNKNOWN)
                     {
                         Debug.WriteLine($"Dropping packet because of type: {proto}");
                         break;
@@ -140,10 +138,10 @@ public class FlircService
         }
     }
 
-    private string GetBufValue(ref IrPacket packet)
+    private static string GetBufValue(ref IrPacket packet)
     {
         var value = new StringBuilder();
-        for (int i = 0; i < packet.len && i < packet.buf.Length; i++)
+        for (var i = 0; i < packet.len && i < packet.buf.Length; i++)
         {
             value.Append($"{packet.buf[i]} ");
         }
