@@ -60,14 +60,21 @@
         Navigation.NavigateTo($"/remote/{name}");
     }
 
-    private void RemoveRemote(string remote)
+    private async Task RemoveRemote(string remote)
     {
-        Snackbar.Add("Remote removal to be implemented...");
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var parameters = new DialogParameters<QuestionDialog>
+        {
+            { x => x.Text, $"Do you really want to delete the remote {remote}? This process cannot be undone." },
+            { x => x.Title, "Remove Remote?" },
+            { x => x.OkAction, () => MappingService.RemoveRemote(remote) }
+        };
+
+        await DialogService.ShowAsync<QuestionDialog>("Add virtual remote..", parameters, options);
     }
 
     public void Dispose()
     {
         MappingService.OnChange -= MappingServiceOnOnChange;
     }
-
 }

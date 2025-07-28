@@ -14,10 +14,10 @@
 </MudDialog>
 
 @code {
-    private string _name = string.Empty;
-
     [CascadingParameter]
     IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private string _name = string.Empty;
 
     private bool BeDisabled => string.IsNullOrWhiteSpace(_name);
 

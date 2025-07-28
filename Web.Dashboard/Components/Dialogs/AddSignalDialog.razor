@@ -43,16 +43,16 @@
 </MudDialog>
 
 @code {
-    private CancellationTokenSource? _cancellation;
-    private Task<OperationResult<IrProt>>? _result;
-    private IrProt? _foundProt;
-    private string _name = string.Empty;
-
     [CascadingParameter]
     IMudDialogInstance MudDialog { get; set; } = null!;
 
     [EditorRequired, Parameter]
     public string RemoteName { get; set; } = null!;
+
+    private CancellationTokenSource? _cancellation;
+    private Task<OperationResult<IrProt>>? _result;
+    private IrProt? _foundProt;
+    private string _name = string.Empty;
 
     private bool BeDisabled => _foundProt == null || string.IsNullOrWhiteSpace(_name);
 
