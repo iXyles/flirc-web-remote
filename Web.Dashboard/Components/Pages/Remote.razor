@@ -6,14 +6,14 @@
 
 @inject IDialogService DialogService
 @inject MappingService MappingService
-@inject FlircServiceHandler ServiceHandler
+@inject FlircService FlircService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 
 @implements IDisposable
 
 <MudContainer Class="mt-6" MaxWidth="MaxWidth.False">
-    <MudButton OnClick="@GoBack">Remotes...</MudButton>
+    <MudButton Variant="Variant.Outlined" OnClick="@GoBack">Remotes...</MudButton>
     <MudGrid>
         @foreach (var mapped in MappingService.GetRemoteMappings(RemoteName))
         {
@@ -48,10 +48,10 @@
         }
 
         MappingService.OnChange += MappingServiceOnOnChange;
-        ServiceHandler.OnTransmitResult += ServiceHandlerOnOnTransmitResult;
+        FlircService.OnTransmitResult += FlircServiceOnOnTransmitResult;
     }
 
-    private void ServiceHandlerOnOnTransmitResult(object? sender, OperationResultEventArgs e)
+    private void FlircServiceOnOnTransmitResult(object? sender, OperationResultEventArgs e)
     {
         if (!e.OperationResult.IsSuccess())
         {
@@ -85,7 +85,7 @@
 
     private void SendSignal(MappedIr mapped)
     {
-        var result = ServiceHandler.QueueTransmit(mapped);
+        var result = FlircService.QueueTransmit(mapped);
         if (!result.IsSuccess())
         {
             Snackbar.Add(string.Join(Environment.NewLine, result.ErrorMessages), Severity.Error, opt =>

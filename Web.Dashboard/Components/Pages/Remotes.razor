@@ -4,7 +4,6 @@
 
 @inject IDialogService DialogService
 @inject MappingService MappingService
-@inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 
 @implements IDisposable
@@ -16,7 +15,7 @@
             <MudItem xs="12" sm="6" md="4" lg="3">
                 <MudPaper Elevation="2" Class="pa-4 d-flex flex-column" Style="height: 200px">
                     <MudField Label="NAME:" Variant="Variant.Outlined" Margin="Margin.Dense">@remote.Name</MudField>
-                    <MudSpacer/>
+                    <MudSpacer />
                     <MudButton Class="mt-4" OnClick="@(() => OpenRemote(remote.Name))" FullWidth="true" Variant="Variant.Filled" Color="Color.Primary" DropShadow="false">
                         OPEN
                     </MudButton>

@@ -7,22 +7,27 @@ namespace FlircWrapper;
 /// <summary>
 /// Basic service to utilize underlaying libraries of Flirc
 /// </summary>
-public class FlircService
+public static class FlircUtil
 {
     const ushort VendorId = 0x20A0; // Flirc vendor ID
     const string DeviceId = "flirc.tv"; // Flirc device ID
 
-    public string? FetchFlircLibraryVersion() =>
+    public static string? FetchFlircLibraryVersion() =>
         Marshal.PtrToStringAnsi(FlircLibraryWrapper.fl_lib_version());
 
-    public string? FetchIrLibraryVersion() =>
+    public static string? FetchIrLibraryVersion() =>
         Marshal.PtrToStringAnsi(IrLibraryWrapper.ir_lib_version());
 
-    public bool OpenConnection()
+    public static bool OpenDevice(bool irMode)
     {
         try
         {
-            return FlircLibraryWrapper.fl_open_device_alt(VendorId, DeviceId) >= 0;
+            if (irMode)
+            {
+                return FlircLibraryWrapper.fl_open_device_alt(VendorId, DeviceId) >= 0;
+            }
+
+            return FlircLibraryWrapper.fl_open_device(VendorId, DeviceId) >= 0;
         }
         catch
         {
@@ -30,10 +35,16 @@ public class FlircService
         }
     }
 
-    public bool WaitForDevice()
+    /// <param name="timeout">In seconds (must be bigger than 0 to be accounted for)</param>
+    public static bool WaitForDevice(int? timeout = null)
     {
         try
         {
+            if (timeout is > 0)
+            {
+                return FlircLibraryWrapper.fl_wait_for_device_timeout(VendorId, DeviceId, timeout.Value) >= 0;
+            }
+
             return FlircLibraryWrapper.fl_wait_for_device(VendorId, DeviceId) >= 0;
         }
         catch
@@ -42,16 +53,16 @@ public class FlircService
         }
     }
 
-    public bool RegisterTransmitter()
+    public static bool RegisterTransmitter()
     {
-        IrLibraryWrapper.IrRegisterTxCallback callback = new IrLibraryWrapper.IrRegisterTxCallback(FlircLibraryWrapper.fl_transmit_raw);
+        var callback = new IrLibraryWrapper.IrRegisterTxCallback(FlircLibraryWrapper.fl_transmit_raw);
         return IrLibraryWrapper.ir_register_tx(callback) == 0;
     }
 
     /// <summary>
     /// Returns a response when it has successfully decoded a valid packet and returned a NOFRAME
     /// </summary>
-    public List<IrProt> ListenToPoll(CancellationToken token)
+    public static List<IrProt> ListenToPoll(CancellationToken token)
     {
         var protos = new List<IrProt>();
         var packet = new IrPacket();
@@ -109,32 +120,47 @@ public class FlircService
         return protos;
     }
 
-    public void CloseConnection()
+    public static void CloseDevice()
     {
         FlircLibraryWrapper.fl_close_device();
     }
 
-    public nint SendPacket(IrProt packet, bool retry = true)
+    public static nint SendPacket(short[] buf, bool retry = true)
     {
         try
         {
-            // ensure we flush the interface of pending packets before sending a packet
-            Debug.WriteLine("Flush interface of pending packets...");
-            FlircLibraryWrapper.fl_dev_flush();
-            Debug.WriteLine("Transmit packet...");
-            return IrLibraryWrapper.ir_tx(packet.protocol, packet.scancode, packet.repeat);
+            Debug.WriteLine("[SEND PACKET] Transmit packet...");
+            var result = TransmitRaw(buf);
+            Debug.WriteLine($"[SEND PACKET] Transmitted packet... status: {result}");
+            return result;
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"Sending packet threw an exception: {ex.Message}...");
+
             if (!retry)
                 return -1;
             Debug.WriteLine("Attempting Re-register transmitter and re-send...");
             if (RegisterTransmitter())
-                return SendPacket(packet, false);
+                return SendPacket(buf, false);
 
             Debug.WriteLine("Failed to add a new transmitter, packet not sent...");
             return -1;
+        }
+    }
+
+    private static int TransmitRaw(short[] buf)
+    {
+        var unmanagedBuf = Marshal.AllocHGlobal(buf.Length * sizeof(short));
+
+        try
+        {
+            Marshal.Copy(buf, 0, unmanagedBuf, buf.Length);
+            return FlircLibraryWrapper.fl_transmit_raw(unmanagedBuf, Convert.ToUInt16(buf.Length), 0, 0);
+        }
+        finally
+        {
+            Marshal.FreeHGlobal(unmanagedBuf);
         }
     }
 

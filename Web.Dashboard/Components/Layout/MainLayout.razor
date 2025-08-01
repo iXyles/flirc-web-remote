@@ -2,18 +2,18 @@
 @inherits LayoutComponentBase
 @implements IDisposable
 
-@inject FlircServiceHandler ServiceHandler
+@inject FlircService Service
 
-<MudThemeProvider/>
-<MudPopoverProvider/>
-<MudDialogProvider/>
-<MudSnackbarProvider/>
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
 
 <MudLayout>
     <MudAppBar>
         Remote App
-        <MudSpacer/>
-        @if (ServiceHandler.IsConnected)
+        <MudSpacer />
+        @if (Service.IsConnected)
         {
             <MudChip T="string" Color="Color.Success">DEVICE CONNECTED</MudChip>
         }
@@ -30,7 +30,7 @@
 @code {
     protected override void OnInitialized()
     {
-        ServiceHandler.OnConnectionChanged += HandleConnectionChanged;
+        Service.OnConnectionChanged += HandleConnectionChanged;
     }
 
     private void HandleConnectionChanged(object? sender, EventArgs e) =>
@@ -38,6 +38,6 @@
 
     public void Dispose()
     {
-        ServiceHandler.OnConnectionChanged -= HandleConnectionChanged;
+        Service.OnConnectionChanged -= HandleConnectionChanged;
     }
 }

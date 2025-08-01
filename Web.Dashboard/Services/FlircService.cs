@@ -1,41 +1,53 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using FlircWrapper;
 using Web.Dashboard.Models;
 
 namespace Web.Dashboard.Services;
 
-public class FlircServiceHandler
+public class FlircService
 {
-    private readonly FlircService _flircService;
     private readonly SemaphoreSlim _semaphore = new(1, 1);
     private readonly BlockingCollection<MappedIr> _queue = new(new ConcurrentQueue<MappedIr>());
     private Task? _processorTask;
-
-    public FlircServiceHandler(FlircService flircService)
-    {
-        _flircService = flircService;
-    }
 
     public bool IsConnected { get; private set; }
     public bool IsScanning { get; private set; }
     public event EventHandler<OperationResultEventArgs>? OnTransmitResult;
     public event EventHandler? OnConnectionChanged;
 
-    public void ConnectDevice()
+    public void ConnectDevice(CancellationToken cancellation)
     {
-        // try open connection to device
-        if (_flircService.OpenConnection())
+        while (true)
         {
-            IsConnected = true;
-            _flircService.RegisterTransmitter();
-            OnConnectionChanged?.Invoke(this,EventArgs.Empty);
+            if (cancellation.IsCancellationRequested) return;
+
+            // try open connection to device
+            if (FlircUtil.OpenDevice(false))
+            {
+                IsConnected = true;
+                FlircUtil.RegisterTransmitter();
+                OnConnectionChanged?.Invoke(this, EventArgs.Empty);
+
+                Console.WriteLine("[FLIRC] device connected successfully...");
+            }
+            else
+            {
+                Console.WriteLine("[FLIRC] Checking for device...");
+                var found = FlircUtil.WaitForDevice(10);
+                if (!found)
+                {
+                    Console.WriteLine("[FLIRC] Device was not found, plug it in or re-connect it...");
+                    // Guessing there is some sort of issue with the "timout" function that causes the failing "wait" to not work properly
+                    Console.WriteLine("[FLIRC] ***NOTE: Some circumstances you may need to restart the application to connect to the device.***");
+                }
+
+                continue;
+            }
+
+            // TODO : How to handle "re-connects" of the device? and how do we detect disconnects (?)
+            break;
         }
-        // if failed, maybe disconnected, then wait till it is connected
-        else if (_flircService.WaitForDevice())
-        {
-            ConnectDevice();
-        }
-        // TODO : How to handle "re-connects" of the device? and how do we detect disconnects (?)
     }
 
     public void StartProcessor() =>
@@ -48,12 +60,9 @@ public class FlircServiceHandler
             await _semaphore.WaitAsync();
             try
             {
-                var result = _flircService.SendPacket(new IrProt
-                {
-                    protocol = mapped.Protocol,
-                    scancode = mapped.ScanCode,
-                    repeat = mapped.Repeat
-                });
+                Debug.WriteLine($"[PROCESS SEND] Transmitting packet for {mapped.Name}...");
+                var result = FlircUtil.SendPacket(mapped.Buffer);
+                Debug.WriteLine($"[PROCESS SEND] Transmission completed for {mapped.Name}...");
                 OnTransmitResult?.Invoke(
                     this,
                     new OperationResultEventArgs(
@@ -89,7 +98,7 @@ public class FlircServiceHandler
 
     private Task<OperationResult<IrProt>> PollInNewThread(CancellationToken token)
     {
-        var protos = _flircService.ListenToPoll(token);
+        var protos = FlircUtil.ListenToPoll(token);
         foreach (var proto in protos)
         {
             // return first "proto/packet" - this is from testing of my devices that has worked...

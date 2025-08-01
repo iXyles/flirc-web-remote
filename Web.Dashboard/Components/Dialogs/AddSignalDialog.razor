@@ -1,9 +1,10 @@
+@using System.Text
 @using FlircWrapper
 @using Web.Dashboard.Models
 @using Web.Dashboard.Services
 
 @inject MappingService MappingService
-@inject FlircServiceHandler ServiceHandler
+@inject FlircService FlircService
 @inject ISnackbar Snackbar
 
 @implements IDisposable
@@ -21,17 +22,19 @@
             else
             {
                 <MudText Typo="Typo.body1">
-                    REMOTE BUTTON PRESSED
+                    REMOTE BUTTON RECORDED
                 </MudText>
-                <MudTextField T="string" @bind-Value="_name" Immediate="true" OnKeyDown="@Callback" Label="Key name" Variant="Variant.Outlined" Margin="Margin.Dense" />
-                <MudField Label="Protocol" Variant="Variant.Outlined" Margin="Margin.Dense">
-                    @_foundProt.Value.protocol
-                </MudField>
-                <MudField Label="Scancode" Variant="Variant.Outlined" Margin="Margin.Dense">
-                    @_foundProt.Value.scancode
-                </MudField>
-                <MudField Label="Repeat" Variant="Variant.Outlined" Margin="Margin.Dense">
-                    @_foundProt.Value.repeat
+                <MudTextField
+                    T="string"
+                    @bind-Value="_name"
+                    Immediate="true"
+                    OnKeyDown="@Callback"
+                    Label="Key name"
+                    Variant="Variant.Outlined"
+                    Margin="Margin.Dense"
+                />
+                <MudField Label="Buffer" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @GetBufValue(_foundProt.Value)
                 </MudField>
             }
         </div>
@@ -58,14 +61,14 @@
 
     protected override void OnInitialized()
     {
-        if (!ServiceHandler.IsConnected)
+        if (!FlircService.IsConnected)
         {
             Snackbar.Add("Device not connected...", Severity.Error);
             Fail();
             return;
         }
 
-        if (ServiceHandler.IsScanning)
+        if (FlircService.IsScanning)
         {
             Snackbar.Add("Someone else is currently adding a new key...", Severity.Error);
             Fail();
@@ -73,7 +76,7 @@
         }
 
         _cancellation = new CancellationTokenSource();
-        HandleTaskCompletion(ServiceHandler.StartPoll(_cancellation.Token));
+        HandleTaskCompletion(FlircService.StartPoll(_cancellation.Token));
     }
 
     private void HandleTaskCompletion(Task<OperationResult<IrProt>> pollingTask)
@@ -115,12 +118,13 @@
             return;
         }
 
-        var result = MappingService.AddMapping(RemoteName, new MappedIr(
-            _name,
-            _foundProt.Value.scancode,
-            _foundProt.Value.protocol,
-            _foundProt.Value.repeat
-        ));
+        // Create a new buffer of the correct length and convert to short[]
+        var buf = _foundProt.Value.buf
+            .Take(_foundProt.Value.len)
+            .Select(b => unchecked((short)b))
+            .ToArray();
+
+        var result = MappingService.AddMapping(RemoteName, new MappedIr(_name, buf));
 
         if (result.IsSuccess())
         {
@@ -131,6 +135,17 @@
         {
             Snackbar.Add(string.Join(Environment.NewLine, result.ErrorMessages), Severity.Error);
         }
+    }
+
+    private static string GetBufValue(IrProt packet)
+    {
+        var value = new StringBuilder();
+        for (var i = 0; i < packet.len && i < packet.buf.Length; i++)
+        {
+            value.Append($"{packet.buf[i]} ");
+        }
+
+        return value.ToString();
     }
 
     void Success() => InvokeAsync(() => MudDialog.Close(DialogResult.Ok(true)));
@@ -145,5 +160,4 @@
             _result = null;
         }
     }
-
 }

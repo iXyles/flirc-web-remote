@@ -1,4 +1,3 @@
-using FlircWrapper;
 using MudBlazor;
 using MudBlazor.Services;
 using Web.Dashboard.Components;
@@ -39,7 +38,6 @@ public class Program
         });
 
         builder.Services.AddSingleton<FlircService>();
-        builder.Services.AddSingleton<FlircServiceHandler>();
         builder.Services.AddSingleton<MappingService>();
         builder.Services.AddHostedService<FlircHostService>();
 
