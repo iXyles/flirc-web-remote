@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Components.Server.Circuits;
 using MudBlazor;
 using MudBlazor.Services;
 using Web.Dashboard.Components;
@@ -37,8 +38,12 @@ public class Program
             config.SnackbarConfiguration.SnackbarVariant = Variant.Filled;
         });
 
+        builder.Services.AddSingleton<FlircDeviceManager>();
+        builder.Services.AddSingleton<ConfigurationService>();
         builder.Services.AddSingleton<FlircService>();
         builder.Services.AddSingleton<MappingService>();
+        builder.Services.AddScoped<CircuitAccessor>();
+        builder.Services.AddScoped<CircuitHandler, FlircCircuitHandler>();
         builder.Services.AddHostedService<FlircHostService>();
 
         var app = builder.Build();

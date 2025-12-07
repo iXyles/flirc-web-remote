@@ -1,8 +1,14 @@
-﻿@using Web.Dashboard.Services
+﻿@using Web.Dashboard.Components.Dialogs
+@using Web.Dashboard.Models
+@using Web.Dashboard.Services
+
 @inherits LayoutComponentBase
 @implements IDisposable
 
-@inject FlircService Service
+@inject FlircDeviceManager DeviceManager
+@inject ConfigurationService ConfigService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <MudThemeProvider />
 <MudPopoverProvider />
@@ -13,13 +19,20 @@
     <MudAppBar>
         Remote App
         <MudSpacer />
-        @if (Service.IsConnected)
+        <MudButton OnClick="@AddNewRemote" Variant="Variant.Filled" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Add" Class="ml-2">
+            ADD NEW REMOTE
+        </MudButton>
+        @if (!DeviceManager.IsConnected)
         {
-            <MudChip T="string" Color="Color.Success">DEVICE CONNECTED</MudChip>
+            <MudChip T="string" Color="Color.Error" Icon="@Icons.Material.Filled.UsbOff">DEVICE NOT CONNECTED</MudChip>
+        }
+        else if (DeviceManager.CurrentMode == DeviceMode.ConfigMode)
+        {
+            <MudChip T="string" Color="Color.Warning" Icon="@Icons.Material.Filled.Settings">CONFIGURATION MODE ACTIVE</MudChip>
         }
         else
         {
-            <MudChip T="string" Color="Color.Warning">DEVICE NOT CONNECTED</MudChip>
+            <MudChip T="string" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">READY</MudChip>
         }
     </MudAppBar>
     <MudMainContent>
@@ -30,14 +43,45 @@
 @code {
     protected override void OnInitialized()
     {
-        Service.OnConnectionChanged += HandleConnectionChanged;
+        DeviceManager.OnConnectionChanged += HandleStateChanged;
+        DeviceManager.OnModeChanged += HandleStateChanged;
+        ConfigService.OnConfigurationModeChanged += HandleConfigModeChanged;
     }
 
-    private void HandleConnectionChanged(object? sender, EventArgs e) =>
+    private void HandleStateChanged(object? sender, EventArgs e) =>
         InvokeAsync(StateHasChanged);
+
+    private void HandleConfigModeChanged(object? sender, ConfigurationModeChangedEventArgs e)
+    {
+        if (e.IsActive)
+        {
+            Snackbar.Add("Configuration mode activated. End-users cannot transmit signals.", Severity.Info, config =>
+            {
+                config.VisibleStateDuration = 3000;
+            });
+        }
+        else
+        {
+            Snackbar.Add("Configuration mode ended. Device is ready for use.", Severity.Success, config =>
+            {
+                config.VisibleStateDuration = 3000;
+            });
+        }
+
+        InvokeAsync(StateHasChanged);
+    }
+
+    private async Task AddNewRemote()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        await DialogService.ShowAsync<AddRemoteDialog>("Add virtual remote..", options);
+        await InvokeAsync(StateHasChanged);
+    }
 
     public void Dispose()
     {
-        Service.OnConnectionChanged -= HandleConnectionChanged;
+        DeviceManager.OnConnectionChanged -= HandleStateChanged;
+        DeviceManager.OnModeChanged -= HandleStateChanged;
+        ConfigService.OnConfigurationModeChanged -= HandleConfigModeChanged;
     }
 }

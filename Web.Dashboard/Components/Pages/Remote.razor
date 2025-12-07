@@ -7,19 +7,38 @@
 @inject IDialogService DialogService
 @inject MappingService MappingService
 @inject FlircService FlircService
+@inject FlircDeviceManager DeviceManager
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 
 @implements IDisposable
 
 <MudContainer Class="mt-6" MaxWidth="MaxWidth.False">
-    <MudButton Variant="Variant.Outlined" OnClick="@GoBack">Remotes...</MudButton>
+    <MudButton Variant="Variant.Outlined" OnClick="@GoBack" StartIcon="@Icons.Material.Filled.ArrowBack">Back to Remotes</MudButton>
+
+    @if (DeviceManager.CurrentMode == DeviceMode.ConfigMode)
+    {
+        <MudAlert Severity="Severity.Warning" Class="my-4" Icon="@Icons.Material.Filled.Settings">
+            <strong>Configuration Mode Active</strong><br />
+            The device is currently in configuration mode. Please wait for the other user to finish configuring before using the remote.
+        </MudAlert>
+    }
+
+    <MudText Typo="Typo.h4" Class="mt-4 mb-2">@RemoteName</MudText>
+
     <MudGrid>
         @foreach (var mapped in MappingService.GetRemoteMappings(RemoteName))
         {
             <MudItem xs="12" sm="6" md="4" lg="3">
                 <MudPaper Elevation="2" Class="pa-4 d-flex flex-column" Style="height: 200px">
-                    <MudButton Style="height: 100%" OnClick="@(() => SendSignal(mapped))" FullWidth="true" Variant="Variant.Filled" Color="Color.Primary" DropShadow="false">
+                    <MudButton
+                        Style="height: 100%"
+                        OnClick="@(() => SendSignal(mapped))"
+                        FullWidth="true"
+                        Variant="Variant.Filled"
+                        Color="Color.Primary"
+                        DropShadow="false"
+                        Disabled="@(DeviceManager.CurrentMode == DeviceMode.ConfigMode || !DeviceManager.IsConnected)">
                         @mapped.Name
                     </MudButton>
                 </MudPaper>
@@ -27,8 +46,15 @@
         }
         <MudItem xs="12" sm="6" md="4" lg="3">
             <MudPaper Elevation="2" Class="pa-4 d-flex flex-column" Style="height: 200px">
-                <MudButton Style="height: 100%" OnClick="@AddNewSignal" FullWidth="true" Variant="Variant.Filled" Color="Color.Primary" DropShadow="false">
-                    ADD NEW MAPPING...
+                <MudButton
+                    Style="height: 100%"
+                    OnClick="@AddNewSignal"
+                    FullWidth="true"
+                    Variant="Variant.Outlined"
+                    Color="Color.Primary"
+                    DropShadow="false"
+                    StartIcon="@Icons.Material.Filled.Add">
+                    ADD NEW MAPPING
                 </MudButton>
             </MudPaper>
         </MudItem>
@@ -49,17 +75,26 @@
 
         MappingService.OnChange += MappingServiceOnOnChange;
         FlircService.OnTransmitResult += FlircServiceOnOnTransmitResult;
+        DeviceManager.OnModeChanged += HandleDeviceStateChanged;
+        DeviceManager.OnConnectionChanged += HandleDeviceStateChanged;
     }
+
+    private void HandleDeviceStateChanged(object? sender, EventArgs e) =>
+        InvokeAsync(StateHasChanged);
 
     private void FlircServiceOnOnTransmitResult(object? sender, OperationResultEventArgs e)
     {
         if (!e.OperationResult.IsSuccess())
         {
-            // TODO ; Add so we can know if it came from "this" remote or not (?)
-            Snackbar.Add($"FAILED TRANSMITTING KEY: {e.Key}, CODE: {string.Join(Environment.NewLine, e.OperationResult.ErrorMessages)}", Severity.Error, opt =>
-            {
-                opt.VisibleStateDuration = 1000;
-            }, "transmit");
+            Snackbar.Add(
+                $"FAILED TRANSMITTING KEY: {e.Key}, CODE: {string.Join(Environment.NewLine, e.OperationResult.ErrorMessages)}",
+                Severity.Error,
+                opt =>
+                {
+                    opt.VisibleStateDuration = 1000;
+                },
+                "transmit"
+            );
         }
     }
 
@@ -88,15 +123,23 @@
         var result = FlircService.QueueTransmit(mapped);
         if (!result.IsSuccess())
         {
-            Snackbar.Add(string.Join(Environment.NewLine, result.ErrorMessages), Severity.Error, opt =>
-            {
-                opt.VisibleStateDuration = 3000;
-            }, "transmit");
+            Snackbar.Add(
+                string.Join(Environment.NewLine, result.ErrorMessages),
+                Severity.Error,
+                opt =>
+                {
+                    opt.VisibleStateDuration = 3000;
+                },
+                "transmit"
+            );
         }
     }
 
     public void Dispose()
     {
         MappingService.OnChange -= MappingServiceOnOnChange;
+        FlircService.OnTransmitResult -= FlircServiceOnOnTransmitResult;
+        DeviceManager.OnModeChanged -= HandleDeviceStateChanged;
+        DeviceManager.OnConnectionChanged -= HandleDeviceStateChanged;
     }
 }

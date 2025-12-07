@@ -5,6 +5,9 @@
 
 @inject MappingService MappingService
 @inject FlircService FlircService
+@inject ConfigurationService ConfigService
+@inject FlircDeviceManager DeviceManager
+@inject CircuitAccessor CircuitAccessor
 @inject ISnackbar Snackbar
 
 @implements IDisposable
@@ -56,22 +59,49 @@
     private Task<OperationResult<IrProt>>? _result;
     private IrProt? _foundProt;
     private string _name = string.Empty;
+    private string? _circuitId;
+    private bool _configModeEntered;
 
     private bool BeDisabled => _foundProt == null || string.IsNullOrWhiteSpace(_name);
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        if (!FlircService.IsConnected)
+        // Get the real circuit ID from the scoped CircuitAccessor
+        _circuitId = CircuitAccessor.CircuitId;
+
+        if (string.IsNullOrWhiteSpace(_circuitId))
         {
-            Snackbar.Add("Device not connected...", Severity.Error);
-            Fail();
+            Snackbar.Add("Circuit ID not available. Please refresh and try again.", Severity.Error);
+            await Fail();
             return;
         }
+
+        if (!DeviceManager.IsConnected)
+        {
+            Snackbar.Add("Device not connected...", Severity.Error);
+            await Fail();
+            return;
+        }
+
+        // Try to enter configuration mode
+        var configResult = await ConfigService.TryEnterConfigMode(_circuitId);
+        if (!configResult.IsSuccess())
+        {
+            Snackbar.Add(string.Join(", ", configResult.ErrorMessages), Severity.Error);
+            await Fail();
+            return;
+        }
+
+        _configModeEntered = true;
+
+        // Cancel any pending transmissions since we're entering config mode
+        FlircService.CancelPendingTransmissions();
 
         if (FlircService.IsScanning)
         {
             Snackbar.Add("Someone else is currently adding a new key...", Severity.Error);
-            Fail();
+            await ExitConfigMode();
+            await Fail();
             return;
         }
 
@@ -85,7 +115,7 @@
         {
             if (t.IsFaulted)
             {
-                Fail();
+                await Fail();
                 Snackbar.Add(t.Exception.Message, Severity.Error);
             }
             else if (t.IsCompletedSuccessfully)
@@ -94,7 +124,7 @@
                 var result = t.Result;
                 if (!result.TryGetResult(out var prot))
                 {
-                    Fail();
+                    await Fail();
                     Snackbar.Add(string.Join(Environment.NewLine, result.ErrorMessages), Severity.Error);
                 }
 
@@ -104,13 +134,13 @@
         });
     }
 
-    private void Callback(KeyboardEventArgs args)
+    private async Task Callback(KeyboardEventArgs args)
     {
         if (args.Key == "Enter" && !BeDisabled)
-            Submit();
+            await Submit();
     }
 
-    private void Submit()
+    private async Task Submit()
     {
         if (!_foundProt.HasValue)
         {
@@ -129,7 +159,7 @@
         if (result.IsSuccess())
         {
             Snackbar.Add("Mapped signal added!", Severity.Success);
-            Success();
+            await Success();
         }
         else
         {
@@ -148,16 +178,50 @@
         return value.ToString();
     }
 
-    void Success() => InvokeAsync(() => MudDialog.Close(DialogResult.Ok(true)));
-    void Fail() => InvokeAsync(() => MudDialog.Cancel());
+    private async Task ExitConfigMode()
+    {
+        if (_configModeEntered && !string.IsNullOrWhiteSpace(_circuitId))
+        {
+            await ConfigService.ExitConfigMode(_circuitId);
+            _configModeEntered = false;
+        }
+    }
+
+    async Task Success()
+    {
+        await ExitConfigMode();
+        await InvokeAsync(() => MudDialog.Close(DialogResult.Ok(true)));
+    }
+
+    async Task Fail()
+    {
+        await InvokeAsync(() => MudDialog.Cancel());
+    }
 
     public void Dispose()
     {
-        if (_cancellation != null && _result != null)
+        if (_cancellation is not null && _result is not null)
         {
             _cancellation.Cancel();
             _cancellation = null;
             _result = null;
+        }
+
+        // Ensure we exit config mode on dispose
+        if (_configModeEntered && !string.IsNullOrWhiteSpace(_circuitId))
+        {
+            // Fire and forget - we're disposing
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await ConfigService.ExitConfigMode(_circuitId);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[AddSignalDialog] Error exiting config mode on dispose: {ex.Message}");
+                }
+            });
         }
     }
 }

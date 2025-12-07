@@ -1,62 +1,130 @@
 @page "/"
 @using Web.Dashboard.Components.Dialogs
+@using Web.Dashboard.Models
 @using Web.Dashboard.Services
 
 @inject IDialogService DialogService
 @inject MappingService MappingService
-@inject NavigationManager Navigation
+@inject FlircDeviceManager DeviceManager
+@inject FlircService FlircService
+@inject ISnackbar Snackbar
 
 @implements IDisposable
 
-<MudContainer Class="mt-6" MaxWidth="MaxWidth.False">
-    <MudGrid>
-        @foreach (var remote in MappingService.GetVirtualRemotes())
+<MudContainer Class="ma-0 pa-0" MaxWidth="MaxWidth.False">
+    @{
+        var remotes = MappingService.GetVirtualRemotes().ToList();
+    }
+
+    @if (remotes.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">
+            No remotes configured yet. Click the button below to add your first remote.
+        </MudAlert>
+    }
+    else
+    {
+        @if (DeviceManager.CurrentMode == DeviceMode.ConfigMode)
         {
-            <MudItem xs="12" sm="6" md="4" lg="3">
-                <MudPaper Elevation="2" Class="pa-4 d-flex flex-column" Style="height: 200px">
-                    <MudField Label="NAME:" Variant="Variant.Outlined" Margin="Margin.Dense">@remote.Name</MudField>
-                    <MudSpacer />
-                    <MudButton Class="mt-4" OnClick="@(() => OpenRemote(remote.Name))" FullWidth="true" Variant="Variant.Filled" Color="Color.Primary" DropShadow="false">
-                        OPEN
-                    </MudButton>
-                    <MudButton Class="mt-4" OnClick="@(() => RemoveRemote(remote.Name))" FullWidth="true" Variant="Variant.Filled" Color="Color.Error" DropShadow="false">
-                        REMOVE
-                    </MudButton>
-                </MudPaper>
-            </MudItem>
+            <MudAlert Severity="Severity.Warning" Class="mb-4" Icon="@Icons.Material.Filled.Settings">
+                <strong>Configuration Mode Active</strong><br />
+                The device is currently in configuration mode. Remote buttons are disabled until configuration is complete.
+            </MudAlert>
         }
-        <MudItem xs="12" sm="6" md="4" lg="3">
-            <MudPaper Elevation="2" Class="pa-4 d-flex flex-column" Style="height: 200px">
-                <MudButton Style="height: 100%" OnClick="@AddNewRemote" FullWidth="true" Variant="Variant.Filled" Color="Color.Primary" DropShadow="false">
-                    ADD NEW REMOTE...
-                </MudButton>
-            </MudPaper>
-        </MudItem>
-    </MudGrid>
+
+        <MudTabs Elevation="0" Rounded="@true" ApplyEffectsToContainer="@true" PanelClass="pa-6">
+            @foreach (var remote in remotes)
+            {
+                <MudTabPanel Text="@remote.Name" Icon="@Icons.Material.Filled.Tv">
+                    <MudGrid>
+                        @foreach (var mapped in remote.Mappings.Values)
+                        {
+                            <MudItem xs="12" sm="6" md="4" lg="3">
+                                <MudPaper Elevation="2" Class="pa-4 d-flex flex-column" Style="height: 150px">
+                                    <MudButton
+                                        Style="height: 100%"
+                                        OnClick="@(() => SendSignal(mapped))"
+                                        FullWidth="true"
+                                        Variant="Variant.Filled"
+                                        Color="Color.Primary"
+                                        DropShadow="false"
+                                        Disabled="@(DeviceManager.CurrentMode == DeviceMode.ConfigMode || !DeviceManager.IsConnected)">
+                                        @mapped.Name
+                                    </MudButton>
+                                </MudPaper>
+                            </MudItem>
+                        }
+                        <MudItem xs="12" sm="6" md="4" lg="3">
+                            <MudPaper Elevation="2" Class="pa-4 d-flex flex-column" Style="height: 150px">
+                                <MudButton
+                                    Style="height: 100%"
+                                    OnClick="@(() => AddNewSignal(remote.Name))"
+                                    FullWidth="true"
+                                    Variant="Variant.Outlined"
+                                    Color="Color.Primary"
+                                    DropShadow="false"
+                                    StartIcon="@Icons.Material.Filled.Add">
+                                    ADD SIGNAL
+                                </MudButton>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                    <MudDivider Class="my-4" />
+                    <MudButton OnClick="@(() => RemoveRemote(remote.Name))" Variant="Variant.Text" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete">
+                        Remove This Remote
+                    </MudButton>
+                </MudTabPanel>
+            }
+        </MudTabs>
+    }
 </MudContainer>
 
 @code {
-
     protected override void OnInitialized()
     {
         MappingService.OnChange += MappingServiceOnOnChange;
+        DeviceManager.OnModeChanged += HandleDeviceStateChanged;
+        DeviceManager.OnConnectionChanged += HandleDeviceStateChanged;
+        FlircService.OnTransmitResult += FlircServiceOnOnTransmitResult;
     }
 
-    private void MappingServiceOnOnChange(object? sender, EventArgs e)
-    {
+    private void HandleDeviceStateChanged(object? sender, EventArgs e) =>
         InvokeAsync(StateHasChanged);
+
+    private void MappingServiceOnOnChange(object? sender, EventArgs e) =>
+        InvokeAsync(StateHasChanged);
+
+    private void FlircServiceOnOnTransmitResult(object? sender, OperationResultEventArgs e)
+    {
+        if (!e.OperationResult.IsSuccess())
+        {
+            Snackbar.Add($"Failed to transmit {e.Key}: {string.Join(", ", e.OperationResult.ErrorMessages)}", Severity.Error, opt =>
+            {
+                opt.VisibleStateDuration = 3000;
+            });
+        }
     }
 
-    private async Task AddNewRemote()
+    private async Task AddNewSignal(string remoteName)
     {
         var options = new DialogOptions { CloseOnEscapeKey = true };
-        await DialogService.ShowAsync<AddRemoteDialog>("Add virtual remote..", options);
-        await InvokeAsync(StateHasChanged);
+        var parameters = new DialogParameters
+        {
+            { nameof(AddSignalDialog.RemoteName), remoteName }
+        };
+        await DialogService.ShowAsync<AddSignalDialog>("Add IR mapping..", parameters, options);
     }
 
-    private void OpenRemote(string name)
+    private void SendSignal(MappedIr mapped)
     {
-        Navigation.NavigateTo($"/remote/{name}");
+        var result = FlircService.QueueTransmit(mapped);
+        if (!result.IsSuccess())
+        {
+            Snackbar.Add(string.Join(Environment.NewLine, result.ErrorMessages), Severity.Error, opt =>
+            {
+                opt.VisibleStateDuration = 3000;
+            });
+        }
     }
 
     private async Task RemoveRemote(string remote)
@@ -69,11 +137,14 @@
             { x => x.OkAction, () => MappingService.RemoveRemote(remote) }
         };
 
-        await DialogService.ShowAsync<QuestionDialog>("Add virtual remote..", parameters, options);
+        await DialogService.ShowAsync<QuestionDialog>("Remove remote..", parameters, options);
     }
 
     public void Dispose()
     {
         MappingService.OnChange -= MappingServiceOnOnChange;
+        DeviceManager.OnModeChanged -= HandleDeviceStateChanged;
+        DeviceManager.OnConnectionChanged -= HandleDeviceStateChanged;
+        FlircService.OnTransmitResult -= FlircServiceOnOnTransmitResult;
     }
 }
