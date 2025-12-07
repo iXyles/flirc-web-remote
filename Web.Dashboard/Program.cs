@@ -43,6 +43,7 @@ public class Program
         builder.Services.AddSingleton<FlircService>();
         builder.Services.AddSingleton<MappingService>();
         builder.Services.AddScoped<CircuitAccessor>();
+        builder.Services.AddScoped<UiConfigurationService>();
         builder.Services.AddScoped<CircuitHandler, FlircCircuitHandler>();
         builder.Services.AddHostedService<FlircHostService>();
 

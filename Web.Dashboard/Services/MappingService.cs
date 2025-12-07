@@ -100,12 +100,84 @@ public class MappingService
     /// </summary>
     public OperationResult RemoveRemoteMapping(string remoteName, string mapName)
     {
-        if (!_remotes.TryRemove(remoteName, out var remote))
+        if (!_remotes.TryGetValue(remoteName, out var remote))
             return OperationResult.FailureResult("Could not find remote.");
 
         if (!remote.Mappings.TryRemove(mapName, out _))
-            return OperationResult.FailureResult("Could not find mapped key.");
+            return OperationResult.FailureResult("Could not find button.");
 
+        SaveRemote();
+        return OperationResult.SuccessResult();
+    }
+
+    /// <summary>
+    /// Rename an existing remote. Validates that the new name is unique.
+    /// </summary>
+    public OperationResult RenameRemote(string oldName, string newName)
+    {
+        if (string.IsNullOrWhiteSpace(newName))
+            return OperationResult.FailureResult("Remote name cannot be empty.");
+
+        if (oldName == newName)
+            return OperationResult.SuccessResult(); // No change needed
+
+        if (!_remotes.TryGetValue(oldName, out var remote))
+            return OperationResult.FailureResult("Could not find remote.");
+
+        // Check if new name already exists
+        if (_remotes.ContainsKey(newName))
+            return OperationResult.FailureResult("A remote with this name already exists.");
+
+        // Remove old entry and add with new name
+        if (!_remotes.TryRemove(oldName, out _))
+            return OperationResult.FailureResult("Failed to remove old remote entry.");
+
+        var renamedRemote = remote with { Name = newName };
+        if (!_remotes.TryAdd(newName, renamedRemote))
+        {
+            // Rollback: add the old one back
+            _remotes.TryAdd(oldName, remote);
+            return OperationResult.FailureResult("Failed to add renamed remote.");
+        }
+
+        SaveRemote();
+        return OperationResult.SuccessResult();
+    }
+
+    /// <summary>
+    /// Rename a button/mapping within a remote. Validates that the new name is unique within the remote.
+    /// </summary>
+    public OperationResult RenameMapping(string remoteName, string oldButtonName, string newButtonName)
+    {
+        if (string.IsNullOrWhiteSpace(newButtonName))
+            return OperationResult.FailureResult("Button name cannot be empty.");
+
+        if (oldButtonName == newButtonName)
+            return OperationResult.SuccessResult(); // No change needed
+
+        if (!_remotes.TryGetValue(remoteName, out var remote))
+            return OperationResult.FailureResult("Could not find remote.");
+
+        if (!remote.Mappings.TryGetValue(oldButtonName, out var mapping))
+            return OperationResult.FailureResult("Could not find button.");
+
+        // Check if new name already exists in this remote
+        if (remote.Mappings.ContainsKey(newButtonName))
+            return OperationResult.FailureResult("A button with this name already exists in this remote.");
+
+        // Remove old entry and add with new name
+        if (!remote.Mappings.TryRemove(oldButtonName, out _))
+            return OperationResult.FailureResult("Failed to remove old button entry.");
+
+        var renamedMapping = mapping with { Name = newButtonName };
+        if (!remote.Mappings.TryAdd(newButtonName, renamedMapping))
+        {
+            // Rollback: add the old one back
+            remote.Mappings.TryAdd(oldButtonName, mapping);
+            return OperationResult.FailureResult("Failed to add renamed button.");
+        }
+
+        SaveRemote();
         return OperationResult.SuccessResult();
     }
 

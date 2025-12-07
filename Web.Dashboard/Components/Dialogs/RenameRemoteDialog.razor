@@ -1,0 +1,63 @@
+@using Web.Dashboard.Services
+
+@inject MappingService MappingService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudTextField
+            T="string"
+            @bind-Value="_newName"
+            Immediate="true"
+            OnKeyDown="@Callback"
+            Label="New remote name"
+            Variant="Variant.Outlined"
+            Margin="Margin.Dense"
+        />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@Cancel">Cancel</MudButton>
+        <MudButton OnClick="@Submit" Disabled="@BeDisabled" Color="Color.Primary">Rename</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [EditorRequired, Parameter]
+    public string CurrentName { get; set; } = string.Empty;
+
+    private string _newName = string.Empty;
+
+    private bool BeDisabled => string.IsNullOrWhiteSpace(_newName);
+
+    protected override void OnInitialized()
+    {
+        _newName = CurrentName;
+    }
+
+    private void Submit()
+    {
+        var result = MappingService.RenameRemote(CurrentName, _newName);
+
+        if (result.IsSuccess())
+        {
+            Snackbar.Add("Remote renamed successfully!", Severity.Success);
+            Success();
+        }
+        else
+        {
+            Snackbar.Add(string.Join(Environment.NewLine, result.ErrorMessages), Severity.Error);
+        }
+    }
+
+    private void Callback(KeyboardEventArgs args)
+    {
+        if (args.Key == "Enter" && !BeDisabled)
+            Submit();
+    }
+
+    void Success() => InvokeAsync(() => MudDialog.Close(DialogResult.Ok(true)));
+    void Cancel() => InvokeAsync(() => MudDialog.Cancel());
+}

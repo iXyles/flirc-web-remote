@@ -7,6 +7,7 @@
 @inject MappingService MappingService
 @inject FlircDeviceManager DeviceManager
 @inject FlircService FlircService
+@inject UiConfigurationService UiConfigService
 @inject ISnackbar Snackbar
 
 @implements IDisposable
@@ -19,7 +20,7 @@
     @if (remotes.Count == 0)
     {
         <MudAlert Severity="Severity.Info">
-            No remotes configured yet. Click the button below to add your first remote.
+            No remotes configured yet. @(UiConfigService.IsEditModeActive ? "Use the toolbar menu to add your first remote." : "Enable edit mode in the toolbar menu to add your first remote.")
         </MudAlert>
     }
     else
@@ -36,43 +37,82 @@
             @foreach (var remote in remotes)
             {
                 <MudTabPanel Text="@remote.Name" Icon="@Icons.Material.Filled.Tv">
-                    <MudGrid>
-                        @foreach (var mapped in remote.Mappings.Values)
-                        {
-                            <MudItem xs="12" sm="6" md="4" lg="3">
-                                <MudPaper Elevation="2" Class="pa-4 d-flex flex-column" Style="height: 150px">
-                                    <MudButton
-                                        Style="height: 100%"
-                                        OnClick="@(() => SendSignal(mapped))"
-                                        FullWidth="true"
-                                        Variant="Variant.Filled"
-                                        Color="Color.Primary"
-                                        DropShadow="false"
-                                        Disabled="@(DeviceManager.CurrentMode == DeviceMode.ConfigMode || !DeviceManager.IsConnected)">
-                                        @mapped.Name
-                                    </MudButton>
-                                </MudPaper>
-                            </MudItem>
-                        }
-                        <MudItem xs="12" sm="6" md="4" lg="3">
-                            <MudPaper Elevation="2" Class="pa-4 d-flex flex-column" Style="height: 150px">
-                                <MudButton
-                                    Style="height: 100%"
-                                    OnClick="@(() => AddNewSignal(remote.Name))"
-                                    FullWidth="true"
-                                    Variant="Variant.Outlined"
-                                    Color="Color.Primary"
-                                    DropShadow="false"
-                                    StartIcon="@Icons.Material.Filled.Add">
-                                    ADD SIGNAL
-                                </MudButton>
-                            </MudPaper>
-                        </MudItem>
-                    </MudGrid>
-                    <MudDivider Class="my-4" />
-                    <MudButton OnClick="@(() => RemoveRemote(remote.Name))" Variant="Variant.Text" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete">
-                        Remove This Remote
-                    </MudButton>
+                    <TabContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Tv" Class="mr-2" />
+                            <MudText>@remote.Name</MudText>
+                            @if (UiConfigService.IsEditModeActive)
+                            {
+                                <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                                    <MudMenuItem OnClick="@(() => RenameRemote(remote.Name))" Icon="@Icons.Material.Filled.Edit">
+                                        Rename Remote
+                                    </MudMenuItem>
+                                    <MudMenuItem OnClick="@(() => RemoveRemote(remote.Name))" Icon="@Icons.Material.Filled.Delete">
+                                        Remove Remote
+                                    </MudMenuItem>
+                                </MudMenu>
+                            }
+                        </div>
+                    </TabContent>
+                    <ChildContent>
+                        <MudGrid>
+                            @if (remote.Mappings.Values.Count == 0 && !UiConfigService.IsEditModeActive)
+                            {
+                                <MudItem xs="12">
+                                    <MudAlert Severity="Severity.Info">
+                                        This remote has no buttons. Enable edit mode to add buttons.
+                                    </MudAlert>
+                                </MudItem>
+                            }
+                            @foreach (var mapped in remote.Mappings.Values)
+                            {
+                                <MudItem xs="12" sm="6" md="4" lg="3">
+                                    <MudPaper Elevation="2" Class="pa-4 d-flex flex-column" Style="height: 150px; position: relative;">
+                                        @if (UiConfigService.IsEditModeActive)
+                                        {
+                                            <div style="position: absolute; top: 4px; right: 4px; z-index: 10;">
+                                                <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Dense="true">
+                                                    <MudMenuItem OnClick="@(() => RenameButton(remote.Name, mapped.Name))" Icon="@Icons.Material.Filled.Edit">
+                                                        Rename Button
+                                                    </MudMenuItem>
+                                                    <MudMenuItem OnClick="@(() => RemoveButton(remote.Name, mapped.Name))" Icon="@Icons.Material.Filled.Delete">
+                                                        Remove Button
+                                                    </MudMenuItem>
+                                                </MudMenu>
+                                            </div>
+                                        }
+                                        <MudButton
+                                            Style="height: 100%"
+                                            OnClick="@(() => SendSignal(mapped))"
+                                            FullWidth="true"
+                                            Variant="Variant.Filled"
+                                            Color="Color.Primary"
+                                            DropShadow="false"
+                                            Disabled="@(DeviceManager.CurrentMode == DeviceMode.ConfigMode || !DeviceManager.IsConnected)">
+                                            @mapped.Name
+                                        </MudButton>
+                                    </MudPaper>
+                                </MudItem>
+                            }
+                            @if (UiConfigService.IsEditModeActive)
+                            {
+                                <MudItem xs="12" sm="6" md="4" lg="3">
+                                    <MudPaper Elevation="2" Class="pa-4 d-flex flex-column" Style="height: 150px">
+                                        <MudButton
+                                            Style="height: 100%"
+                                            OnClick="@(() => RecordButton(remote.Name))"
+                                            FullWidth="true"
+                                            Variant="Variant.Outlined"
+                                            Color="Color.Primary"
+                                            DropShadow="false"
+                                            StartIcon="@Icons.Material.Filled.Add">
+                                            RECORD BUTTON
+                                        </MudButton>
+                                    </MudPaper>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    </ChildContent>
                 </MudTabPanel>
             }
         </MudTabs>
@@ -86,6 +126,7 @@
         DeviceManager.OnModeChanged += HandleDeviceStateChanged;
         DeviceManager.OnConnectionChanged += HandleDeviceStateChanged;
         FlircService.OnTransmitResult += FlircServiceOnOnTransmitResult;
+        UiConfigService.OnEditModeChanged += HandleDeviceStateChanged;
     }
 
     private void HandleDeviceStateChanged(object? sender, EventArgs e) =>
@@ -98,21 +139,21 @@
     {
         if (!e.OperationResult.IsSuccess())
         {
-            Snackbar.Add($"Failed to transmit {e.Key}: {string.Join(", ", e.OperationResult.ErrorMessages)}", Severity.Error, opt =>
+            Snackbar.Add($"Failed to transmit button: {string.Join(", ", e.OperationResult.ErrorMessages)}", Severity.Error, opt =>
             {
                 opt.VisibleStateDuration = 3000;
             });
         }
     }
 
-    private async Task AddNewSignal(string remoteName)
+    private async Task RecordButton(string remoteName)
     {
         var options = new DialogOptions { CloseOnEscapeKey = true };
         var parameters = new DialogParameters
         {
             { nameof(AddSignalDialog.RemoteName), remoteName }
         };
-        await DialogService.ShowAsync<AddSignalDialog>("Add IR mapping..", parameters, options);
+        await DialogService.ShowAsync<AddSignalDialog>("Record Button", parameters, options);
     }
 
     private void SendSignal(MappedIr mapped)
@@ -127,17 +168,51 @@
         }
     }
 
-    private async Task RemoveRemote(string remote)
+    private async Task RenameRemote(string remoteName)
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var parameters = new DialogParameters
+        {
+            { nameof(RenameRemoteDialog.CurrentName), remoteName }
+        };
+        await DialogService.ShowAsync<RenameRemoteDialog>("Rename Remote", parameters, options);
+    }
+
+    private async Task RemoveRemote(string remoteName)
     {
         var options = new DialogOptions { CloseOnEscapeKey = true };
         var parameters = new DialogParameters<QuestionDialog>
         {
-            { x => x.Text, $"Do you really want to delete the remote {remote}? This process cannot be undone." },
+            { x => x.Text, $"Do you really want to delete the remote '{remoteName}'? This process cannot be undone." },
             { x => x.Title, "Remove Remote?" },
-            { x => x.OkAction, () => MappingService.RemoveRemote(remote) }
+            { x => x.OkAction, () => MappingService.RemoveRemote(remoteName) }
         };
 
-        await DialogService.ShowAsync<QuestionDialog>("Remove remote..", parameters, options);
+        await DialogService.ShowAsync<QuestionDialog>("Remove Remote", parameters, options);
+    }
+
+    private async Task RenameButton(string remoteName, string buttonName)
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var parameters = new DialogParameters
+        {
+            { nameof(RenameButtonDialog.RemoteName), remoteName },
+            { nameof(RenameButtonDialog.CurrentButtonName), buttonName }
+        };
+        await DialogService.ShowAsync<RenameButtonDialog>("Rename Button", parameters, options);
+    }
+
+    private async Task RemoveButton(string remoteName, string buttonName)
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var parameters = new DialogParameters<QuestionDialog>
+        {
+            { x => x.Text, $"Do you really want to delete the button '{buttonName}'? This process cannot be undone." },
+            { x => x.Title, "Remove Button?" },
+            { x => x.OkAction, () => MappingService.RemoveRemoteMapping(remoteName, buttonName) }
+        };
+
+        await DialogService.ShowAsync<QuestionDialog>("Remove Button", parameters, options);
     }
 
     public void Dispose()
@@ -146,5 +221,6 @@
         DeviceManager.OnModeChanged -= HandleDeviceStateChanged;
         DeviceManager.OnConnectionChanged -= HandleDeviceStateChanged;
         FlircService.OnTransmitResult -= FlircServiceOnOnTransmitResult;
+        UiConfigService.OnEditModeChanged -= HandleDeviceStateChanged;
     }
 }
