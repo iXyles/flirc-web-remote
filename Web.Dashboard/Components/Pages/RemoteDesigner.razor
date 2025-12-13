@@ -1,0 +1,377 @@
+@page "/remote-designer"
+
+@using Web.Dashboard.Models.RemoteDesigner
+@using Web.Dashboard.Services
+
+@inject RemoteDesignerService DesignerService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+@implements IAsyncDisposable
+
+<PageTitle>Remote Designer</PageTitle>
+
+<div class="designer-container">
+    <!-- Main Canvas Area -->
+    <div class="designer-main-area">
+        <div class="designer-toolbar d-flex flex-wrap gap-2 pa-2 align-center">
+            <MudButton 
+                Variant="Variant.Filled" 
+                Color="Color.Primary" 
+                StartIcon="@Icons.Material.Filled.Add"
+                OnClick="AddNewButton"
+            >
+                Add Button
+            </MudButton>
+            <MudButton 
+                Variant="Variant.Outlined" 
+                Color="Color.Secondary" 
+                StartIcon="@Icons.Material.Filled.Delete"
+                OnClick="ClearLayout"
+            >
+                Clear All
+            </MudButton>
+            <MudButton 
+                Variant="Variant.Filled" 
+                Color="Color.Success" 
+                StartIcon="@Icons.Material.Filled.Visibility"
+                OnClick="PreviewRemote"
+            >
+                Preview
+            </MudButton>
+            <MudSpacer />
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@_layout.Name</MudText>
+        </div>
+
+        <div class="designer-canvas">
+            <div class="designer-canvas-wrapper">
+                <div class="designer-grid" style="background-color: @_layout.BackgroundColor">
+                    @* Render buttons with explicit grid positioning *@
+                    @foreach (var button in _layout.Buttons)
+                    {
+                        <div class="grid-button"
+                             data-id="@button.Id"
+                             style="grid-row: @(button.Row + 1) / span @button.RowSpan; grid-column: @(button.Column + 1) / span @button.ColumnSpan;"
+                        >
+                            <div class="grid-button-inner">
+                                <button 
+                                    class="remote-button @(_selectedButton?.Id == button.Id ? "selected" : "")"
+                                    style="background-color: @button.BackgroundColor; color: @button.TextColor;"
+                                    @onclick="@(() => SelectButton(button))"
+                                    @onclick:stopPropagation="true"
+                                >
+                                    @if (!string.IsNullOrEmpty(button.Icon))
+                                    {
+                                        <MudIcon Icon="@button.Icon" Class="remote-button-icon" />
+                                    }
+                                    <span class="remote-button-label">@button.Label</span>
+                                    
+                                    @if (_selectedButton?.Id == button.Id)
+                                    {
+                                        <div class="resize-handle" @onclick:stopPropagation="true">
+                                            <MudIcon Icon="@Icons.Material.Filled.AspectRatio" Size="Size.Small" />
+                                        </div>
+                                    }
+                                </button>
+                            </div>
+                        </div>
+                    }
+
+                    @* Render empty cells for adding new buttons *@
+                    @for (var row = 0; row < _layout.Rows; row++)
+                    {
+                        @for (var col = 0; col < _layout.Columns; col++)
+                        {
+                            var currentRow = row;
+                            var currentCol = col;
+                            @if (!IsCellOccupied(currentRow, currentCol))
+                            {
+                                <div class="designer-grid-cell" style="grid-row: @(currentRow + 1); grid-column: @(currentCol + 1);">
+                                    <div class="designer-grid-cell-inner" 
+                                         @onclick="() => OnEmptyCellClick(currentRow, currentCol)">
+                                        <MudIcon Icon="@Icons.Material.Filled.Add" Size="Size.Small" Style="opacity: 0.3;" />
+                                    </div>
+                                </div>
+                            }
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Property Editor Panel -->
+    @if (_selectedButton is not null)
+    {
+        <div class="designer-properties-pane">
+            <div class="pa-4">
+                <div class="d-flex justify-space-between align-center mb-4">
+                    <MudText Typo="Typo.h6">Button Properties</MudText>
+                    <MudIconButton 
+                        Icon="@Icons.Material.Filled.Close" 
+                        Size="Size.Small" 
+                        OnClick="@(() => _selectedButton = null)" 
+                    />
+                </div>
+
+                <MudStack Spacing="3">
+                    <MudTextField 
+                        @bind-Value="_selectedButton.Label"
+                        Label="Label"
+                        Variant="Variant.Outlined"
+                        OnDebounceIntervalElapsed="UpdateButton"
+                        DebounceInterval="300" 
+                    />
+
+                    <MudSelect 
+                        @bind-Value="_selectedButton.Icon"
+                        Label="Icon"
+                        Variant="Variant.Outlined"
+                        AnchorOrigin="Origin.BottomCenter"
+                        T="string"
+                    >
+                        @foreach (var signal in _availableSignals)
+                        {
+                            <MudSelectItem Value="@signal.Icon">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <MudIcon Icon="@signal.Icon" Size="Size.Small" />
+                                    <span>@signal.Name</span>
+                                </div>
+                            </MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <MudColorPicker 
+                        @bind-Value="_backgroundColor"
+                        Label="Background Color"
+                        Variant="Variant.Outlined"
+                        ColorPickerMode="ColorPickerMode.HEX" 
+                    />
+
+                    <MudColorPicker 
+                        @bind-Value="_textColor"
+                        Label="Text Color"
+                        Variant="Variant.Outlined"
+                        ColorPickerMode="ColorPickerMode.HEX" 
+                    />
+
+                    <MudButton 
+                        Variant="Variant.Filled"
+                        Color="Color.Primary"
+                        OnClick="@UpdateButtonColor"
+                        FullWidth="true"
+                    >
+                        Apply Colors
+                    </MudButton>
+
+                    <MudDivider />
+
+                    <MudButton 
+                        Variant="Variant.Filled"
+                        Color="Color.Error"
+                        StartIcon="@Icons.Material.Filled.Delete"
+                        FullWidth="true"
+                        OnClick="DeleteSelectedButton"
+                    >
+                        Delete Button
+                    </MudButton>
+                </MudStack>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private RemoteLayout _layout = new();
+    private ButtonDefinition? _selectedButton;
+    private List<FakeSignal> _availableSignals = [];
+    private MudBlazor.Utilities.MudColor _backgroundColor = new("#1976d2");
+    private MudBlazor.Utilities.MudColor _textColor = new("#ffffff");
+
+    private DotNetObjectReference<RemoteDesigner>? _dotNetRef;
+    private IJSObjectReference? _module;
+    private IJSObjectReference? _designerInstance;
+
+    protected override void OnInitialized()
+    {
+        _layout = DesignerService.GetCurrentLayout();
+        _availableSignals = DesignerService.GetFakeSignals();
+        DesignerService.OnLayoutChanged += HandleLayoutChanged;
+        _dotNetRef = DotNetObjectReference.Create(this);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                _module = await JS.InvokeAsync<IJSObjectReference>("import", "./js/designer.js");
+                _designerInstance = await _module.InvokeAsync<IJSObjectReference>("initDesigner", _dotNetRef);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to initialize designer: {ex.Message}");
+            }
+        }
+    }
+
+    [JSInvokable]
+    public void UpdateButtonLayout(string id, int row, int col, int rowSpan, int colSpan)
+    {
+        var button = _layout.Buttons.FirstOrDefault(b => b.Id == id);
+        if (button != null)
+        {
+            button.Row = row;
+            button.Column = col;
+            button.RowSpan = rowSpan;
+            button.ColumnSpan = colSpan;
+            DesignerService.UpdateButton(button);
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Gets the button at a specific grid position, considering spans.
+    /// </summary>
+    private ButtonDefinition? GetButtonAtPosition(int row, int col)
+    {
+        return _layout.Buttons.FirstOrDefault(b =>
+            row >= b.Row && row < b.Row + b.RowSpan &&
+            col >= b.Column && col < b.Column + b.ColumnSpan);
+    }
+
+    /// <summary>
+    /// Checks if a cell is occupied by any button span.
+    /// </summary>
+    private bool IsCellOccupied(int row, int col)
+    {
+        return GetButtonAtPosition(row, col) is not null;
+    }
+
+    /// <summary>
+    /// Handles clicking an empty cell to add a new button.
+    /// </summary>
+    private void OnEmptyCellClick(int row, int col)
+    {
+        var signals = DesignerService.GetFakeSignals();
+        var newButton = new ButtonDefinition
+        {
+            Label = "New",
+            Icon = signals[0].Icon,
+            Row = row,
+            Column = col,
+            BackgroundColor = "#1976d2",
+            TextColor = "#ffffff"
+        };
+
+        DesignerService.AddButton(newButton);
+        SelectButton(newButton);
+    }
+
+    /// <summary>
+    /// Selects a button for editing.
+    /// </summary>
+    private void SelectButton(ButtonDefinition button)
+    {
+        _selectedButton = button;
+        _backgroundColor = new MudBlazor.Utilities.MudColor(button.BackgroundColor);
+        _textColor = new MudBlazor.Utilities.MudColor(button.TextColor);
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Updates the currently selected button.
+    /// </summary>
+    private void UpdateButton()
+    {
+        if (_selectedButton is null) return;
+        DesignerService.UpdateButton(_selectedButton);
+    }
+
+    /// <summary>
+    /// Updates button colors when Apply Colors button is clicked.
+    /// </summary>
+    private void UpdateButtonColor()
+    {
+        if (_selectedButton is null) return;
+        _selectedButton.BackgroundColor = _backgroundColor.ToString(MudBlazor.Utilities.MudColorOutputFormats.Hex);
+        _selectedButton.TextColor = _textColor.ToString(MudBlazor.Utilities.MudColorOutputFormats.Hex);
+        UpdateButton();
+    }
+
+    /// <summary>
+    /// Deletes the currently selected button.
+    /// </summary>
+    private void DeleteSelectedButton()
+    {
+        if (_selectedButton is null) return;
+        DesignerService.RemoveButton(_selectedButton.Id);
+        _selectedButton = null;
+    }
+
+    /// <summary>
+    /// Adds a new button at the first available position.
+    /// </summary>
+    private void AddNewButton()
+    {
+        // Find first empty cell
+        for (var row = 0; row < _layout.Rows; row++)
+        {
+            for (var col = 0; col < _layout.Columns; col++)
+            {
+                if (IsCellOccupied(row, col)) 
+                    continue;
+
+                OnEmptyCellClick(row, col);
+                return;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Clears all buttons from the layout.
+    /// </summary>
+    private void ClearLayout()
+    {
+        _selectedButton = null;
+        DesignerService.ClearLayout();
+    }
+
+    /// <summary>
+    /// Navigates to the preview page.
+    /// </summary>
+    private void PreviewRemote()
+    {
+        Navigation.NavigateTo("/remote-view");
+    }
+
+    /// <summary>
+    /// Handles layout changes from the service.
+    /// </summary>
+    private void HandleLayoutChanged(object? sender, EventArgs e)
+    {
+        _layout = DesignerService.GetCurrentLayout();
+        InvokeAsync(StateHasChanged);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+       DesignerService.OnLayoutChanged -= HandleLayoutChanged;
+        _dotNetRef?.Dispose();
+        
+        try 
+        {
+            if (_designerInstance != null)
+            {
+                await _designerInstance.InvokeVoidAsync("dispose");
+                await _designerInstance.DisposeAsync();
+            }
+            if (_module != null)
+            {
+                await _module.DisposeAsync();
+            }
+        }
+        catch (Exception) { /* Ignore disposal errors */ }
+    }
+}

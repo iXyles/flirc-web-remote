@@ -1,0 +1,260 @@
+/* Mobile-First Remote Designer Styles */
+
+:root {
+    --cell-padding: 4px;
+    --button-border-radius: 8px;
+    --touch-target-min: 44px;
+}
+
+/* Prevent text selection and zoom during interactions */
+.remote-designer,
+.remote-preview,
+.remote-view {
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+}
+
+/* Designer Grid Canvas - uses padding instead of gap */
+.designer-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: repeat(12, minmax(0, 1fr));
+    gap: 0;
+    padding: 8px;
+    background-color: #121212;
+    box-sizing: border-box;
+    touch-action: none; /* Prevent browser zooming/panning on the grid */
+    height: 100%; /* Ensure grid takes full height of wrapper */
+    width: 100%; /* Ensure grid takes full width */
+}
+
+/* Designer grid cell - empty cells with dashed border */
+.designer-grid-cell {
+    padding: 2px;
+    box-sizing: border-box;
+}
+
+.designer-grid-cell-inner {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 1 / 1;
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    border-radius: var(--button-border-radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    background-color: transparent;
+    touch-action: none;
+}
+
+.designer-grid-cell-inner:hover {
+    border-color: rgba(255, 255, 255, 0.4);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Grid button positioning - applies padding for spacing */
+.grid-button {
+    padding: var(--cell-padding);
+    box-sizing: border-box;
+    touch-action: none;
+    position: relative; /* Anchor for absolute positioning during resize */
+}
+
+/* Inner wrapper fills the cell space and applies spacing */
+.grid-button-inner {
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+}
+
+/* Button Styles */
+.remote-button {
+    touch-action: none;
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: var(--button-border-radius);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    position: relative; /* For resize handle positioning */
+}
+
+.remote-button:active {
+    transform: scale(0.95);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.remote-button-icon {
+    font-size: 24px;
+}
+
+.remote-button-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Selected Button Highlight */
+.remote-button.selected {
+    outline: 3px solid #ffd700;
+    outline-offset: -3px;
+    z-index: 10;
+}
+
+.grid-button.interacting {
+    z-index: 100;
+    opacity: 0.8;
+    pointer-events: none; /* Let events pass through to container during drag */
+}
+
+.resize-handle {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 4px;
+    color: white;
+    padding: 2px;
+    cursor: nwse-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none; /* Prevent scrolling while resizing */
+}
+
+/* Increase touch target for resize handle */
+.resize-handle::after {
+    content: '';
+    position: absolute;
+    top: -15px;
+    left: -15px;
+    right: -5px;
+    bottom: -5px;
+}
+
+.resize-handle:hover {
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+/* Remote View (Fullscreen) - No gap, uses aspect ratio, full screen */
+.remote-view {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(12, 1fr);
+    gap: 0;
+    padding: 16px;
+    min-height: calc(100dvh - var(--mud-appbar-height));
+    max-height: calc(100dvh - var(--mud-appbar-height));
+    box-sizing: border-box;
+}
+
+/* Toolbar */
+.designer-toolbar {
+    display: flex;
+    gap: 8px;
+    padding: 12px;
+    background-color: #1e1e1e;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Designer Container - Responsive Layout */
+.designer-container {
+    display: flex;
+    flex-direction: row; /* Desktop default: Sidebar on right */
+    height: calc(100dvh - var(--mud-appbar-height));
+    overflow: hidden;
+}
+
+.designer-main-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Designer Canvas - Main container */
+.designer-canvas {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #1a1a1a;
+    touch-action: pan-y;
+}
+
+.designer-canvas-wrapper {
+    width: 100%;
+    max-width: 480px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Properties Panel */
+.designer-properties-pane {
+    width: 320px;
+    background-color: #1e1e1e;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    overflow-y: auto;
+}
+
+/* Combined buttons for D-pad, Volume, etc. */
+.combined-button {
+    flex: 1;
+    padding: 2px;
+    box-sizing: border-box;
+}
+
+.combined-button button {
+    width: 100%;
+    height: 100%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .designer-container {
+        flex-direction: column; /* Mobile: Panel on bottom */
+    }
+
+    .designer-properties-pane {
+        width: 100%;
+        height: 50vh;
+        border-left: none;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .designer-grid,
+    .remote-view {
+        padding: 8px;
+    }
+
+    :root {
+        --cell-padding: 2px;
+    }
+
+    .designer-canvas-wrapper {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 599px) {
+    .remote-view {
+        min-height: calc(100dvh - calc(var(--mud-appbar-height) - var(--mud-appbar-height) / 8));
+        max-height: calc(100dvh - calc(var(--mud-appbar-height) - var(--mud-appbar-height) / 8));
+    }
+}
+
