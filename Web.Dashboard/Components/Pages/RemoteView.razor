@@ -1,0 +1,60 @@
+@page "/remote-view"
+
+@using Web.Dashboard.Models.RemoteDesigner
+@using Web.Dashboard.Services
+
+@inject RemoteDesignerService DesignerService
+
+@implements IDisposable
+
+<PageTitle>Remote View</PageTitle>
+
+<div class="remote-view" style="background-color: @_layout.BackgroundColor">
+    @foreach (var button in _layout.Buttons)
+    {
+        <div class="grid-button"
+             style="grid-row: @(button.Row + 1) / span @button.RowSpan; grid-column: @(button.Column + 1) / span @button.ColumnSpan;">
+            <div class="grid-button-inner">
+                <button 
+                    class="remote-button"
+                    style="background-color: @button.BackgroundColor; color: @button.TextColor;"
+                    @onclick="() => OnButtonPressed(button)"
+                >
+                    @if (!string.IsNullOrEmpty(button.Icon))
+                    {
+                        <MudIcon Icon="@button.Icon" Class="remote-button-icon" />
+                    }
+                    <span class="remote-button-label">@button.Label</span>
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private RemoteLayout _layout = new();
+
+    protected override void OnInitialized()
+    {
+        _layout = DesignerService.GetCurrentLayout();
+        DesignerService.OnLayoutChanged += HandleLayoutChanged;
+    }
+
+
+    private void OnButtonPressed(ButtonDefinition button)
+    {
+        // Just visual feedback for now
+        Console.WriteLine($"Button pressed: {button.Label}");
+    }
+
+    private void HandleLayoutChanged(object? sender, EventArgs e)
+    {
+        _layout = DesignerService.GetCurrentLayout();
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        DesignerService.OnLayoutChanged -= HandleLayoutChanged;
+    }
+}
