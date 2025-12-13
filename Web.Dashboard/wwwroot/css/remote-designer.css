@@ -210,6 +210,33 @@
     background-color: #1e1e1e;
     border-left: 1px solid rgba(255, 255, 255, 0.1);
     overflow-y: auto;
+    color: #ffffff;
+}
+
+/* Override MudBlazor input styles for dark panel */
+.designer-properties-pane .mud-input-control .mud-input-label {
+    color: rgba(255, 255, 255, 0.7) !important;
+    background-color: #1e1e1e; /* Cover border line */
+}
+
+.designer-properties-pane .mud-input-control .mud-input-slot {
+    color: #ffffff !important;
+}
+
+.designer-properties-pane .mud-input-control .mud-icon-root {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.designer-properties-pane .mud-input-control.mud-input-input-control.mud-input-outlined-with-label .mud-input-outlined-border {
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.designer-properties-pane .mud-input-control:hover .mud-input-outlined-border {
+    border-color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.designer-properties-pane .mud-input-control.mud-input-focused .mud-input-outlined-border {
+    border-color: var(--mud-palette-primary) !important;
 }
 
 /* Combined buttons for D-pad, Volume, etc. */
