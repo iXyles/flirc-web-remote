@@ -37,6 +37,11 @@ public class RemoteLayout
     public List<ButtonDefinition> Buttons { get; set; } = new();
 
     /// <summary>
+    /// All recorded signals available for this remote.
+    /// </summary>
+    public List<Signal> Signals { get; set; } = new();
+
+    /// <summary>
     /// Timestamp of last modification.
     /// </summary>
     public DateTime LastModified { get; set; } = DateTime.UtcNow;

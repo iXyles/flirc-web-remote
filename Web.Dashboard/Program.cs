@@ -41,10 +41,8 @@ public class Program
         builder.Services.AddSingleton<FlircDeviceManager>();
         builder.Services.AddSingleton<ConfigurationService>();
         builder.Services.AddSingleton<FlircService>();
-        builder.Services.AddSingleton<MappingService>();
         builder.Services.AddSingleton<RemoteDesignerService>();
         builder.Services.AddScoped<CircuitAccessor>();
-        builder.Services.AddScoped<UiConfigurationService>();
         builder.Services.AddScoped<CircuitHandler, FlircCircuitHandler>();
         builder.Services.AddHostedService<FlircHostService>();
 

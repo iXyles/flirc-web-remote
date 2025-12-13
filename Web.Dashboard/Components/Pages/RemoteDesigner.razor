@@ -4,6 +4,10 @@
 @using Web.Dashboard.Services
 
 @inject RemoteDesignerService DesignerService
+@inject FlircService FlircService
+@inject ConfigurationService ConfigService
+@inject CircuitAccessor CircuitAccessor
+@inject IDialogService DialogService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
@@ -43,11 +47,32 @@
             <MudText Typo="Typo.body2" Color="Color.Secondary">@_layout.Name</MudText>
         </div>
 
+        @if (_layout.Buttons.Any(b => b.Row == -1))
+        {
+            <div 
+                class="d-flex gap-2 pa-2 align-center flex-wrap" 
+                style="background-color: #f5f5f5; border-bottom: 1px solid #e0e0e0;"
+            >
+                <MudText Typo="Typo.caption">Unplaced:</MudText>
+                @foreach (var btn in _layout.Buttons.Where(b => b.Row == -1))
+                {
+                    <MudChip 
+                        T="string" 
+                        OnClick="@(() => SelectButton(btn))" 
+                        Color="@(_selectedButton?.Id == btn.Id ? Color.Primary : Color.Default)"
+                        Variant="Variant.Outlined" Size="Size.Small"
+                    >
+                        @btn.Label
+                    </MudChip>
+                }
+            </div>
+        }
+
         <div class="designer-canvas">
             <div class="designer-canvas-wrapper">
                 <div class="designer-grid" style="background-color: @_layout.BackgroundColor">
                     @* Render buttons with explicit grid positioning *@
-                    @foreach (var button in _layout.Buttons)
+                    @foreach (var button in _layout.Buttons.Where(b => b.Row >= 0))
                     {
                         <div class="grid-button"
                              data-id="@button.Id"
@@ -131,16 +156,65 @@
                         AnchorOrigin="Origin.BottomCenter"
                         T="string"
                     >
-                        @foreach (var signal in _availableSignals)
+                        @foreach (var icon in _availableIcons)
                         {
-                            <MudSelectItem Value="@signal.Icon">
+                            <MudSelectItem Value="@icon.Value">
                                 <div style="display: flex; align-items: center; gap: 8px;">
-                                    <MudIcon Icon="@signal.Icon" Size="Size.Small" />
-                                    <span>@signal.Name</span>
+                                    <MudIcon Icon="@icon.Value" Size="Size.Small" />
+                                    <span>@icon.Key</span>
                                 </div>
                             </MudSelectItem>
                         }
                     </MudSelect>
+
+                    <MudDivider />
+                    
+                    <MudText Typo="Typo.subtitle2">Signal Assignment</MudText>
+                    
+                    <MudSelect 
+                        @bind-Value="_selectedButton.SignalId"
+                        Label="Assigned Signal"
+                        Variant="Variant.Outlined"
+                        AnchorOrigin="Origin.BottomCenter"
+                        T="string"
+                        Clearable="true"
+                        OnClearButtonClick="@(() => _selectedButton.SignalId = null)"
+                    >
+                        @foreach (var signal in _availableSignals)
+                        {
+                            <MudSelectItem Value="@signal.Id">@signal.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <div class="d-flex gap-2">
+                        <MudButton 
+                            Variant="Variant.Outlined" 
+                            Color="@(_isRecording ? Color.Error : Color.Primary)"
+                            StartIcon="@(_isRecording ? Icons.Material.Filled.Stop : Icons.Material.Filled.FiberManualRecord)"
+                            OnClick="RecordNewSignal"
+                            Disabled="@_isRecording"
+                            FullWidth="true"
+                        >
+                            @(_isRecording ? "Recording..." : "Record")
+                        </MudButton>
+
+                        <MudButton 
+                            Variant="Variant.Outlined" 
+                            Color="Color.Secondary"
+                            StartIcon="@Icons.Material.Filled.List"
+                            OnClick="OpenManageSignalsDialog"
+                            FullWidth="true"
+                        >
+                            Manage
+                        </MudButton>
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(_recordingStatus))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Info">@_recordingStatus</MudText>
+                    }
+
+                    <MudDivider />
 
                     <MudColorPicker 
                         @bind-Value="_backgroundColor"
@@ -185,9 +259,13 @@
 @code {
     private RemoteLayout _layout = new();
     private ButtonDefinition? _selectedButton;
-    private List<FakeSignal> _availableSignals = [];
+    private List<Signal> _availableSignals = [];
+    private Dictionary<string, string> _availableIcons = new();
     private MudBlazor.Utilities.MudColor _backgroundColor = new("#1976d2");
     private MudBlazor.Utilities.MudColor _textColor = new("#ffffff");
+    
+    private bool _isRecording = false;
+    private string _recordingStatus = "";
 
     private DotNetObjectReference<RemoteDesigner>? _dotNetRef;
     private IJSObjectReference? _module;
@@ -196,7 +274,8 @@
     protected override void OnInitialized()
     {
         _layout = DesignerService.GetCurrentLayout();
-        _availableSignals = DesignerService.GetFakeSignals();
+        _availableSignals = DesignerService.GetSignals();
+        _availableIcons = GetCommonIcons();
         DesignerService.OnLayoutChanged += HandleLayoutChanged;
         _dotNetRef = DotNetObjectReference.Create(this);
     }
@@ -227,9 +306,208 @@
             button.Column = col;
             button.RowSpan = rowSpan;
             button.ColumnSpan = colSpan;
+            
+            ResolveCollisions(button);
+            
             DesignerService.UpdateButton(button);
             StateHasChanged();
         }
+    }
+
+    private void ResolveCollisions(ButtonDefinition movedButton)
+    {
+        var collisions = _layout.Buttons
+            .Where(b => b.Id != movedButton.Id && b.Row >= 0 && Intersects(b, movedButton))
+            .ToList();
+
+        foreach (var other in collisions)
+        {
+            if (FindFreeSpot(other.RowSpan, other.ColumnSpan, other.Id, out int newRow, out int newCol))
+            {
+                other.Row = newRow;
+                other.Column = newCol;
+            }
+            else
+            {
+                other.Row = -1;
+                other.Column = -1;
+            }
+            DesignerService.UpdateButton(other);
+        }
+    }
+
+    private bool Intersects(ButtonDefinition b1, ButtonDefinition b2)
+    {
+        return b1.Column < b2.Column + b2.ColumnSpan &&
+               b1.Column + b1.ColumnSpan > b2.Column &&
+               b1.Row < b2.Row + b2.RowSpan &&
+               b1.Row + b1.RowSpan > b2.Row;
+    }
+
+    private bool FindFreeSpot(int rowSpan, int colSpan, string excludeId, out int row, out int col)
+    {
+        for (var r = 0; r <= _layout.Rows - rowSpan; r++)
+        {
+            for (var c = 0; c <= _layout.Columns - colSpan; c++)
+            {
+                if (IsAreaFree(r, c, rowSpan, colSpan, excludeId))
+                {
+                    row = r;
+                    col = c;
+                    return true;
+                }
+            }
+        }
+        row = -1;
+        col = -1;
+        return false;
+    }
+
+    private bool IsAreaFree(int row, int col, int rowSpan, int colSpan, string? excludeId = null)
+    {
+        if (row + rowSpan > _layout.Rows || col + colSpan > _layout.Columns) return false;
+        
+        var testRect = new ButtonDefinition { Row = row, Column = col, RowSpan = rowSpan, ColumnSpan = colSpan };
+        return !_layout.Buttons.Any(b => 
+            b.Id != excludeId && 
+            b.Row >= 0 && 
+            Intersects(b, testRect));
+    }
+
+    [JSInvokable]
+    public void SelectButtonById(string id)
+    {
+        var button = _layout.Buttons.FirstOrDefault(b => b.Id == id);
+        if (button != null)
+        {
+            SelectButton(button);
+        }
+    }
+
+    private async Task RecordNewSignal()
+    {
+        if (CircuitAccessor.CircuitId == null)
+        {
+            _recordingStatus = "Error: No active circuit.";
+            return;
+        }
+
+        _isRecording = true;
+        _recordingStatus = "Entering configuration mode...";
+        StateHasChanged();
+
+        var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)); // Increased timeout for config mode entry
+        try 
+        {
+            // 1. Enter Config Mode
+            var configResult = await ConfigService.TryEnterConfigMode(CircuitAccessor.CircuitId, cts.Token);
+            if (!configResult.IsSuccess())
+            {
+                _recordingStatus = $"Failed to enter config mode: {string.Join(" | ", configResult.ErrorMessages)}";
+                return;
+            }
+
+            _recordingStatus = "Press a button on your remote...";
+            StateHasChanged();
+
+            // 2. Record Signal
+            var result = await FlircService.StartPoll(cts.Token);
+
+            if (result.TryGetResult(out var proto))
+            {
+                // Convert ushort[] to short[]
+                var buffer = new short[proto.len];
+                for(int i=0; i<proto.len; i++) buffer[i] = (short)proto.buf[i];
+
+                // Show Save Dialog
+                var dialogOptions = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+                var dialog = await DialogService.ShowAsync<Dialogs.SaveSignalDialog>("Save Signal", dialogOptions);
+                var dialogResult = await dialog.Result;
+
+                if (dialogResult is { Canceled: false, Data: not null })
+                {
+                    dynamic data = dialogResult.Data;
+                    string name = data.Name;
+                    string description = data.Description;
+
+                    var newSignal = new Signal
+                    {
+                        Name = name,
+                        Description = description,
+                        Buffer = buffer
+                    };
+                    
+                    DesignerService.AddSignal(newSignal);
+                    _availableSignals = DesignerService.GetSignals();
+                    
+                    // Auto-assign to selected button if any
+                    if (_selectedButton != null)
+                    {
+                        _selectedButton.SignalId = newSignal.Id;
+                        UpdateButton();
+                    }
+                    
+                    _recordingStatus = "Signal saved!";
+                }
+                else
+                {
+                    _recordingStatus = "Signal recording cancelled.";
+                }
+            }
+            else
+            {
+                _recordingStatus = "Recording failed or timed out.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _recordingStatus = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            // 3. Exit Config Mode
+            if (CircuitAccessor.CircuitId != null)
+            {
+                await ConfigService.ExitConfigMode(CircuitAccessor.CircuitId);
+            }
+
+            _isRecording = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenManageSignalsDialog()
+    {
+        var dialogOptions = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<Web.Dashboard.Components.Dialogs.ManageSignalsDialog>("Manage Signals", dialogOptions);
+        await dialog.Result;
+        
+        // Refresh signals list after dialog closes
+        _availableSignals = DesignerService.GetSignals();
+        StateHasChanged();
+    }
+
+    private Dictionary<string, string> GetCommonIcons()
+    {
+        return new Dictionary<string, string>
+        {
+            { "Power", Icons.Material.Filled.PowerSettingsNew },
+            { "Play", Icons.Material.Filled.PlayArrow },
+            { "Pause", Icons.Material.Filled.Pause },
+            { "Stop", Icons.Material.Filled.Stop },
+            { "Volume Up", Icons.Material.Filled.VolumeUp },
+            { "Volume Down", Icons.Material.Filled.VolumeDown },
+            { "Mute", Icons.Material.Filled.VolumeOff },
+            { "Menu", Icons.Material.Filled.Menu },
+            { "Back", Icons.Material.Filled.ArrowBack },
+            { "Home", Icons.Material.Filled.Home },
+            { "OK", Icons.Material.Filled.CheckCircle },
+            { "Up", Icons.Material.Filled.KeyboardArrowUp },
+            { "Down", Icons.Material.Filled.KeyboardArrowDown },
+            { "Left", Icons.Material.Filled.KeyboardArrowLeft },
+            { "Right", Icons.Material.Filled.KeyboardArrowRight },
+            { "Circle", Icons.Material.Filled.Circle }
+        };
     }
 
     /// <summary>
@@ -238,6 +516,7 @@
     private ButtonDefinition? GetButtonAtPosition(int row, int col)
     {
         return _layout.Buttons.FirstOrDefault(b =>
+            b.Row >= 0 &&
             row >= b.Row && row < b.Row + b.RowSpan &&
             col >= b.Column && col < b.Column + b.ColumnSpan);
     }
@@ -255,11 +534,22 @@
     /// </summary>
     private void OnEmptyCellClick(int row, int col)
     {
-        var signals = DesignerService.GetFakeSignals();
+        if (_selectedButton != null && _selectedButton.Row == -1)
+        {
+            if (IsAreaFree(row, col, _selectedButton.RowSpan, _selectedButton.ColumnSpan, _selectedButton.Id))
+            {
+                _selectedButton.Row = row;
+                _selectedButton.Column = col;
+                DesignerService.UpdateButton(_selectedButton);
+                StateHasChanged();
+                return;
+            }
+        }
+
         var newButton = new ButtonDefinition
         {
             Label = "New",
-            Icon = signals[0].Icon,
+            Icon = Icons.Material.Filled.Circle,
             Row = row,
             Column = col,
             BackgroundColor = "#1976d2",
@@ -353,6 +643,7 @@
     private void HandleLayoutChanged(object? sender, EventArgs e)
     {
         _layout = DesignerService.GetCurrentLayout();
+        _availableSignals = DesignerService.GetSignals();
         InvokeAsync(StateHasChanged);
     }
 

@@ -97,6 +97,11 @@ public class FlircService
         return OperationResult.SuccessResult();
     }
 
+    public OperationResult QueueTransmit(short[] buffer, string name)
+    {
+        return QueueTransmit(new MappedIr(name, buffer));
+    }
+
     /// <summary>
     /// Cancel all pending transmissions in the queue.
     /// Called when entering configuration mode.

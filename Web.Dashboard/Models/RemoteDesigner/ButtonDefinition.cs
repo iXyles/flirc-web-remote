@@ -36,6 +36,11 @@ public class ButtonDefinition
     public ButtonType Type { get; set; } = ButtonType.Single;
 
     /// <summary>
+    /// The ID of the signal assigned to this button.
+    /// </summary>
+    public string? SignalId { get; set; }
+
+    /// <summary>
     /// Grid row position (0-based).
     /// </summary>
     public int Row { get; set; }

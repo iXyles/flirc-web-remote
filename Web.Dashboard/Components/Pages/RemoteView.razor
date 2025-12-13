@@ -4,6 +4,7 @@
 @using Web.Dashboard.Services
 
 @inject RemoteDesignerService DesignerService
+@inject FlircService FlircService
 
 @implements IDisposable
 
@@ -43,8 +44,17 @@
 
     private void OnButtonPressed(ButtonDefinition button)
     {
-        // Just visual feedback for now
-        Console.WriteLine($"Button pressed: {button.Label}");
+        if (string.IsNullOrEmpty(button.SignalId))
+        {
+            // Visual feedback only
+            return;
+        }
+
+        var signal = DesignerService.GetSignal(button.SignalId);
+        if (signal != null)
+        {
+            FlircService.QueueTransmit(signal.Buffer, signal.Name);
+        }
     }
 
     private void HandleLayoutChanged(object? sender, EventArgs e)

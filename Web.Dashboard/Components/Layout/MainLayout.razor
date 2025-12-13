@@ -7,9 +7,9 @@
 
 @inject FlircDeviceManager DeviceManager
 @inject ConfigurationService ConfigService
-@inject UiConfigurationService UiConfigService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject NavigationManager Navigation
 
 <MudThemeProvider />
 <MudPopoverProvider />
@@ -20,10 +20,6 @@
     <MudAppBar>
         Flirc Remote Web Interface
         <MudSpacer />
-        @if (UiConfigService.IsEditModeActive)
-        {
-            <MudChip T="string" Color="Color.Info" Icon="@Icons.Material.Filled.Edit">EDIT MODE</MudChip>
-        }
         @if (!DeviceManager.IsConnected)
         {
             <MudChip T="string" Color="Color.Error" Icon="@Icons.Material.Filled.UsbOff">DEVICE NOT CONNECTED</MudChip>
@@ -37,15 +33,12 @@
             <MudChip T="string" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle">READY</MudChip>
         }
         <MudMenu Icon="@Icons.Material.Filled.MoreVert" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" IconColor="Color.Inherit" Color="Color.Inherit">
-            <MudMenuItem OnClick="@ToggleEditMode" Icon="@(UiConfigService.IsEditModeActive ? Icons.Material.Filled.EditOff : Icons.Material.Filled.Edit)">
-                @(UiConfigService.IsEditModeActive ? "Disable Edit Mode" : "Enable Edit Mode")
+            <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/remote-designer"))" Icon="@Icons.Material.Filled.Edit">
+                Designer
             </MudMenuItem>
-            @if (UiConfigService.IsEditModeActive)
-            {
-                <MudMenuItem OnClick="@AddNewRemote" Icon="@Icons.Material.Filled.Add">
-                    Add Remote
-                </MudMenuItem>
-            }
+            <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/remote-view"))" Icon="@Icons.Material.Filled.Visibility">
+                Remote View
+            </MudMenuItem>
         </MudMenu>
     </MudAppBar>
     <MudMainContent>
@@ -59,23 +52,10 @@
         DeviceManager.OnConnectionChanged += HandleStateChanged;
         DeviceManager.OnModeChanged += HandleStateChanged;
         ConfigService.OnConfigurationModeChanged += HandleConfigModeChanged;
-        UiConfigService.OnEditModeChanged += HandleStateChanged;
     }
 
     private void HandleStateChanged(object? sender, EventArgs e) =>
         InvokeAsync(StateHasChanged);
-
-    private void ToggleEditMode()
-    {
-        UiConfigService.ToggleEditMode();
-        var message = UiConfigService.IsEditModeActive
-            ? "Edit mode enabled. You can now add, rename, and remove remotes and buttons."
-            : "Edit mode disabled.";
-        Snackbar.Add(message, UiConfigService.IsEditModeActive ? Severity.Info : Severity.Normal, config =>
-        {
-            config.VisibleStateDuration = 3000;
-        });
-    }
 
     private void HandleConfigModeChanged(object? sender, ConfigurationModeChangedEventArgs e)
     {
@@ -97,18 +77,10 @@
         InvokeAsync(StateHasChanged);
     }
 
-    private async Task AddNewRemote()
-    {
-        var options = new DialogOptions { CloseOnEscapeKey = true };
-        await DialogService.ShowAsync<AddRemoteDialog>("Add Remote", options);
-        await InvokeAsync(StateHasChanged);
-    }
-
     public void Dispose()
     {
         DeviceManager.OnConnectionChanged -= HandleStateChanged;
         DeviceManager.OnModeChanged -= HandleStateChanged;
         ConfigService.OnConfigurationModeChanged -= HandleConfigModeChanged;
-        UiConfigService.OnEditModeChanged -= HandleStateChanged;
     }
 }

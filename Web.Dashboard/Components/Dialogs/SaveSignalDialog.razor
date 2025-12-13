@@ -1,0 +1,33 @@
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudText Class="mb-3">Signal recorded successfully. Please provide a name and description.</MudText>
+        <MudTextField @bind-Value="SignalName" Label="Signal Name" Variant="Variant.Outlined" Required="true" AutoFocus="true" />
+        <MudTextField @bind-Value="Description" Label="Description" Variant="Variant.Outlined" Lines="3" Class="mt-3" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Save Signal</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    public string SignalName { get; set; } = $"Signal {DateTime.Now:HH:mm:ss}";
+    public string Description { get; set; } = "";
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        if (string.IsNullOrWhiteSpace(SignalName))
+        {
+            Snackbar.Add("Signal name is required", Severity.Warning);
+            return;
+        }
+        MudDialog.Close(DialogResult.Ok(new { Name = SignalName, Description }));
+    }
+}

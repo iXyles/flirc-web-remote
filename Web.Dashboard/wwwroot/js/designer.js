@@ -145,12 +145,56 @@ export class RemoteDesigner {
         }
     }
 
+    resetInteraction() {
+        if (!this.activeElement) return;
+
+        try {
+            if (this.pointerId !== -1) {
+                this.activeElement.releasePointerCapture(this.pointerId);
+            }
+        } catch (e) {
+            // Ignore if capture was already lost
+        }
+
+        this.activeElement.style.transform = '';
+        this.activeElement.style.zIndex = '';
+        this.activeElement.style.opacity = '';
+        this.activeElement.classList.remove('interacting');
+        
+        const inner = this.activeElement.querySelector('.grid-button-inner');
+        if (inner) {
+            inner.style.width = '';
+            inner.style.height = '';
+            inner.style.position = '';
+            inner.style.top = '';
+            inner.style.left = '';
+            inner.style.zIndex = '';
+        }
+
+        this.isDragging = false;
+        this.isResizing = false;
+        this.activeElement = null;
+        this.pointerId = -1;
+    }
+
     onPointerUp(e) {
         if ((!this.isDragging && !this.isResizing) || !this.activeElement) return;
         if (e.pointerId !== this.pointerId) return;
 
         const deltaX = e.clientX - this.startX;
         const deltaY = e.clientY - this.startY;
+        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        const isClick = distance < 5; // 5px threshold
+
+        if (isClick && !this.isResizing) {
+             const buttonId = this.activeElement.dataset.id;
+             if (buttonId) {
+                 console.log('Selecting button:', buttonId);
+                 this.dotNetRef.invokeMethodAsync('SelectButtonById', buttonId);
+             }
+             this.resetInteraction();
+             return;
+        }
 
         // Calculate grid deltas
         const colDelta = Math.round(deltaX / this.cellWidth);
@@ -178,22 +222,6 @@ export class RemoteDesigner {
         newRowSpan = Math.min(newRowSpan, 12 - newRow);
         newColSpan = Math.min(newColSpan, 5 - newCol);
 
-        // Reset styles
-        this.activeElement.style.transform = '';
-        this.activeElement.style.zIndex = '';
-        this.activeElement.style.opacity = '';
-        this.activeElement.classList.remove('interacting');
-        
-        const inner = this.activeElement.querySelector('.grid-button-inner');
-        if (inner) {
-            inner.style.width = '';
-            inner.style.height = '';
-            inner.style.position = '';
-            inner.style.top = '';
-            inner.style.left = '';
-            inner.style.zIndex = '';
-        }
-
         // Get ID from data attribute
         const buttonId = this.activeElement.dataset.id;
 
@@ -202,10 +230,7 @@ export class RemoteDesigner {
             this.dotNetRef.invokeMethodAsync('UpdateButtonLayout', buttonId, newRow, newCol, newRowSpan, newColSpan);
         }
 
-        this.isDragging = false;
-        this.isResizing = false;
-        this.activeElement = null;
-        this.pointerId = -1;
+        this.resetInteraction();
     }
 }
 

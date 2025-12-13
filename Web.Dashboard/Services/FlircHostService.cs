@@ -8,22 +8,18 @@ public class FlircHostService : IHostedService
 {
     private readonly FlircDeviceManager _deviceManager;
     private readonly FlircService _service;
-    private readonly MappingService _mappingService;
 
     public FlircHostService(
         FlircDeviceManager deviceManager,
-        FlircService service,
-        MappingService mappingService
+        FlircService service
     )
     {
         _deviceManager = deviceManager;
         _service = service;
-        _mappingService = mappingService;
     }
 
     public Task StartAsync(CancellationToken cancellationToken)
     {
-        _mappingService.Load();
         _service.StartProcessor();
 
         // Start off-thread so it does not block boot-up of the application

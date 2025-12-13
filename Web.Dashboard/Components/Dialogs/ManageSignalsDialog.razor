@@ -1,0 +1,142 @@
+@using Web.Dashboard.Models.RemoteDesigner
+@using Web.Dashboard.Services
+@inject RemoteDesignerService DesignerService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudTable Items="@_signals" Dense="true" Hover="true" Striped="true" Elevation="0">
+            <HeaderContent>
+                <MudTh>Name</MudTh>
+                <MudTh>Description</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Name">
+                    @if (_editingId == context.Id)
+                    {
+                        <MudTextField @bind-Value="_editName" AutoFocus="true" Margin="Margin.Dense" />
+                    }
+                    else
+                    {
+                        @context.Name
+                    }
+                </MudTd>
+                <MudTd DataLabel="Description">
+                    @if (_editingId == context.Id)
+                    {
+                        <MudTextField @bind-Value="_editDescription" Margin="Margin.Dense" />
+                    }
+                    else
+                    {
+                        @context.Description
+                    }
+                </MudTd>
+                <MudTd>
+                    @if (_editingId == context.Id)
+                    {
+                        <MudIconButton 
+                            Icon="@Icons.Material.Filled.Check" 
+                            Color="Color.Success" 
+                            Size="Size.Small" 
+                            OnClick="@(() => SaveEdit(context))" 
+                        />
+                        <MudIconButton 
+                            Icon="@Icons.Material.Filled.Close" 
+                            Color="Color.Error" 
+                            Size="Size.Small" 
+                            OnClick="CancelEdit" 
+                        />
+                    }
+                    else
+                    {
+                        <MudIconButton 
+                            Icon="@Icons.Material.Filled.Edit" 
+                            Size="Size.Small" 
+                            OnClick="@(() => StartEdit(context))" 
+                        />
+                        <MudIconButton 
+                            Icon="@Icons.Material.Filled.Delete"
+                            Color="Color.Error"
+                            Size="Size.Small"
+                            OnClick="@(() => DeleteSignal(context))" 
+                        />
+                    }
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText>No signals recorded yet.</MudText>
+            </NoRecordsContent>
+        </MudTable>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] 
+    IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private List<Signal> _signals = new();
+    private string? _editingId;
+    private string _editName = "";
+    private string _editDescription = "";
+
+    protected override void OnInitialized()
+    {
+        LoadSignals();
+    }
+
+    private void LoadSignals()
+    {
+        _signals = DesignerService.GetSignals().ToList();
+    }
+
+    private void StartEdit(Signal signal)
+    {
+        _editingId = signal.Id;
+        _editName = signal.Name;
+        _editDescription = signal.Description ?? "";
+    }
+
+    private void CancelEdit()
+    {
+        _editingId = null;
+    }
+
+    private void SaveEdit(Signal signal)
+    {
+        if (string.IsNullOrWhiteSpace(_editName))
+        {
+            Snackbar.Add("Name cannot be empty", Severity.Warning);
+            return;
+        }
+
+        signal.Name = _editName;
+        signal.Description = _editDescription;
+        DesignerService.UpdateSignal(signal);
+        _editingId = null;
+        LoadSignals();
+    }
+
+    private async Task DeleteSignal(Signal signal)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Delete Signal", 
+            $"Are you sure you want to delete '{signal.Name}'? This will remove it from any assigned buttons.", 
+            yesText: "Delete", 
+            cancelText: "Cancel"
+        );
+
+        if (result == true)
+        {
+            DesignerService.RemoveSignal(signal.Id);
+            LoadSignals();
+            Snackbar.Add("Signal deleted", Severity.Success);
+        }
+    }
+
+    private void Close() => MudDialog.Close(DialogResult.Ok(true));
+}
