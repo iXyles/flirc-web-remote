@@ -1,0 +1,36 @@
+<!-- SVG Remote Control Icon -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+    <!-- Remote Body -->
+    <rect x="106" y="32" width="300" height="448" rx="48" ry="48" fill="#212121" stroke="#333" stroke-width="8"/>
+    
+    <!-- Top Transmitter Area -->
+    <path d="M156 32 h200 a1 1 0 0 1 0 0 v20 a20 20 0 0 1 -20 20 h-160 a20 20 0 0 1 -20 -20 v-20 z" fill="#111" opacity="0.5"/>
+
+    <!-- Power Button -->
+    <circle cx="340" cy="110" r="24" fill="#ef5350" />
+    <path d="M340 96 v14" stroke="#7f1d1d" stroke-width="4" stroke-linecap="round" />
+    
+    <!-- Menu / Source Buttons -->
+    <circle cx="172" cy="110" r="16" fill="#424242" />
+    <circle cx="256" cy="110" r="16" fill="#424242" />
+
+    <!-- D-Pad Outer Ring -->
+    <circle cx="256" cy="230" r="85" fill="#333" />
+    <!-- D-Pad Inner Button -->
+    <circle cx="256" cy="230" r="35" fill="#1a1a1a" />
+    <!-- D-Pad Highlights -->
+    <path d="M256 165 v20 M256 275 v20 M191 230 h20 M301 230 h20" stroke="#555" stroke-width="4" stroke-linecap="round" />
+
+    <!-- Volume / Channel Rockers -->
+    <rect x="156" y="350" width="40" height="80" rx="20" fill="#333" />
+    <text x="176" y="375" font-family="Arial" font-weight="bold" font-size="20" fill="#777" text-anchor="middle">+</text>
+    <text x="176" y="415" font-family="Arial" font-weight="bold" font-size="24" fill="#777" text-anchor="middle">-</text>
+
+    <rect x="316" y="350" width="40" height="80" rx="20" fill="#333" />
+    <path d="M336 365 l10 10 h-20 z" fill="#777" />
+    <path d="M336 415 l10 -10 h-20 z" fill="#777" />
+
+    <!-- Bottom Grid -->
+    <circle cx="256" cy="370" r="12" fill="#424242" />
+    <circle cx="256" cy="410" r="12" fill="#424242" />
+</svg>
