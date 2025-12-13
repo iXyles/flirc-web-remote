@@ -665,5 +665,11 @@
             }
         }
         catch (Exception) { /* Ignore disposal errors */ }
+
+        // Ensure we exit config mode if we're leaving the page
+        if (CircuitAccessor.CircuitId != null && ConfigService.IsConfigurationModeActive)
+        {
+             await ConfigService.ExitConfigMode(CircuitAccessor.CircuitId);
+        }
     }
 }

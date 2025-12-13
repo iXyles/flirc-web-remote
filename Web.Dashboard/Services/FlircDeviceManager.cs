@@ -99,20 +99,34 @@ public class FlircDeviceManager
             // Small delay to ensure device is fully disconnected
             await Task.Delay(100, cancellation);
 
-            // Try to open in config mode (irMode=true)
-            if (FlircUtil.OpenDevice(true))
+            // Retry logic with exponential backoff
+            var maxRetries = 3;
+            var baseDelay = 500;
+
+            for (var attempt = 0; attempt < maxRetries; attempt++)
             {
-                IsConnected = true;
-                CurrentMode = DeviceMode.ConfigMode;
+                if (cancellation.IsCancellationRequested)
+                    return OperationResult.FailureResult("Connection cancelled.");
 
-                Console.WriteLine("[FLIRC] Device connected successfully in CONFIG mode...");
-                OnConnectionChanged?.Invoke(this, EventArgs.Empty);
-                OnModeChanged?.Invoke(this, EventArgs.Empty);
+                // Try to open in config mode (irMode=true)
+                if (FlircUtil.OpenDevice(true))
+                {
+                    IsConnected = true;
+                    CurrentMode = DeviceMode.ConfigMode;
 
-                return OperationResult.SuccessResult();
+                    Console.WriteLine("[FLIRC] Device connected successfully in CONFIG mode...");
+                    OnConnectionChanged?.Invoke(this, EventArgs.Empty);
+                    OnModeChanged?.Invoke(this, EventArgs.Empty);
+
+                    return OperationResult.SuccessResult();
+                }
+
+                var delay = baseDelay * (1 << attempt);
+                Console.WriteLine($"[FLIRC] Config mode retry {attempt + 1}/{maxRetries} failed, waiting {delay}ms...");
+                await Task.Delay(delay, cancellation);
             }
 
-            return OperationResult.FailureResult("Failed to open device in configuration mode.");
+            return OperationResult.FailureResult("Failed to open device in configuration mode after multiple attempts.");
         }
         catch (Exception ex)
         {
