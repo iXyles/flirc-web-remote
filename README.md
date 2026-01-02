@@ -10,9 +10,11 @@ Users can customize the controls by mapping physical remote buttons to virtual b
 ## Design & Usage view
 
 Simple end-user usage view, with mobile usage in mind (not perfect, but works well on most devices):
+
 <img width="558" height="800" alt="image" src="https://github.com/user-attachments/assets/42428721-0381-472a-a9b0-8cb11e3940de" />
 
 Designing view of the remote (built to work well on Desktop, touch was not taken into account but works to some extent):
+
 <img width="555" height="1108" alt="image" src="https://github.com/user-attachments/assets/a5c60f33-33d7-4b16-a8af-6f85888359df" />
 
 ## Supported & Verified OS
